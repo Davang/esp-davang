@@ -10,12 +10,6 @@ then
 	exit 1
 fi
 
-echo "Write the MCU target"
-read MCU
-
-echo "Write full path to esp port"
-read PORT
-
 REL_FILE_PATH=$(dirname "${BASH_SOURCE}")
 
 IDF_TARGET=$MCU
