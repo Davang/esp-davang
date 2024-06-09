@@ -9,5 +9,15 @@ jobs:
     name: mark down linter
     steps:
     - uses: actions/checkout@v4
-    - run: echo "${{ github.head_ref }}"
-      continue-on-error: true
+    - uses: DavidAnson/markdownlint-cli2-action@v16
+      with:
+        config: ${{ github.workspace }}/.github/cfg/.markdownlint.jsonc
+        globs: '**/*.md'
+    - uses: deep5050/cppcheck-action@v2.0.0
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN}}
+    - uses: mikeal/publish-to-github-action@master
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BRANCH_NAME: ${{ github.head_ref }}
+    continue-on-error: true
