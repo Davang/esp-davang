@@ -9,5 +9,5 @@ jobs:
     name: mark down linter
     steps:
     - uses: actions/checkout@v4
-    - run: echo "${{ github.ref_name }}"
+    - run: echo "${{ github.ref }}"
       continue-on-error: true
