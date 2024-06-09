@@ -16,7 +16,7 @@ jobs:
     - uses: deep5050/cppcheck-action@v2.0.0
       with:
         github_token: ${{ secrets.GITHUB_TOKEN}}
-    - uses: mikeal/publish-to-github-action@v1.0.0
+    - uses: mikeal/publish-to-github-action@1.0.0
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       BRANCH_NAME: ${{ github.head_ref }}
