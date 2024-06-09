@@ -1,0 +1,25 @@
+name: Davang github actions
+run-name: ${{ github.actor }}'s Github actions
+on: 
+  pull_request:
+jobs:
+  markdown-linter:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    name: mark down linter
+    steps:
+    - uses: actions/checkout@v4
+    - uses: DavidAnson/markdownlint-cli2-action@v16
+      with:
+        config: ${{ github.workspace }}/.github/cfg/.markdownlint.jsonc
+        globs: '**/*.md'
+    - uses: Konstantin343/cppcheck-annotation-action@v1.0
+      with:
+        std: 'c++14'
+    - uses: yuzutech/annotations-action@v0.4.0
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"
+        title: 'Results of CppCheck'
+        input: 'annotations.json'
+    continue-on-error: true
