@@ -13,15 +13,12 @@ jobs:
       with:
         config: ${{ github.workspace }}/.github/cfg/.markdownlint.jsonc
         globs: '**/*.md'
-    - uses: Konstantin343/cppcheck-annotation-action@v1.0
+    - uses: deep5050/cppcheck-action@main
       with:
-        std: 'c++14'
-        sources: ${{ github.workspace }}/components/dvng_gpio/src/davang_gpio.cpp
-        log-level: 'verbose'
-        json-results-file: '${{ github.workspace }}/annotations.json'
-    - uses: yuzutech/annotations-action@v0.4.0
-      with:
-        repo-token: "${{ secrets.GITHUB_TOKEN }}"
-        title: 'Results of CppCheck'
-        input: '${{ github.workspace }}/annotations.json'
+        github_token: ${{ secrets.GITHUB_TOKEN}}
+    - name: publish report    
+      uses: mikeal/publish-to-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        BRANCH_NAME: ${{ github.ref }}
     continue-on-error: true
