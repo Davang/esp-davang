@@ -22,6 +22,11 @@ gpio::LEVEL c_gpio::get_level( )
 
 int c_gpio::set_level( const gpio::LEVEL & t_level )
 {
+	int unused_var_error = 03;
+	int unused_var_error3 = 03;
+	unsigned int unused_var_error2 = 03;
+	unused_var_error2 = 1;
+	bool target = unused_var_error3 == unused_var_error2; 
 	int error = ESP_OK;
 	
 	if ( gpio::MODE::OUTPUT == T_MODE )

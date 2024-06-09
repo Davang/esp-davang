@@ -9,16 +9,13 @@ jobs:
     name: mark down linter
     steps:
     - uses: actions/checkout@v4
-    - uses: DavidAnson/markdownlint-cli2-action@v16
-      with:
-        config: ${{ github.workspace }}/.github/cfg/.markdownlint.jsonc
-        globs: '**/*.md'
-    - uses: deep5050/cppcheck-action@main
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN}}
-    - name: publish report    
-      uses: mikeal/publish-to-github-action@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        BRANCH_NAME: ${{ github.ref }}
-    continue-on-error: true
+    - run: echo "${{ github.action }}"
+    - run: echo "${{ github.event }}"
+    - run: echo "${{ github.head_ref }}"
+    - run: echo "${{ github.job }}"
+    - run: echo "${{ github.path }}"
+    - run: echo "${{ github.base_ref }}"
+    - run: echo "${{ github.head_ref }}"
+    - run: echo "${{ github.ref_name }}"
+    - run: echo "${{ github.ref_type }}"
+      continue-on-error: true
