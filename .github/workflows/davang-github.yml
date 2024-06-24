@@ -19,4 +19,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: workspace_artifacts
-          path: ${{ steps.hello.outputs.file }}
+          path: ${{ steps.hello.outputs.file1 }} ${{ steps.hello.outputs.file2 }}

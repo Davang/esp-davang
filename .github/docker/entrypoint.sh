@@ -3,5 +3,7 @@
 echo "Hello $1"
 time=$(date)
 touch a
-echo "file=./a" >> $GITHUB_OUTPUT
+touch b
+echo "file1=./a" >> $GITHUB_OUTPUT
+echo "file2=./b" >> $GITHUB_OUTPUT
 echo "time=$time" >> $GITHUB_OUTPUT

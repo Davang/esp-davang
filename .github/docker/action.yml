@@ -6,8 +6,8 @@ inputs:
     required: true
     default: 'World'
 outputs:
-  file: # id of output
-    description: 'a file'
+  file1: # id of output
+  file2: # id of output
   time: # id of output
     description: 'The time we greeted you'
 runs:
