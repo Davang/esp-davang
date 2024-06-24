@@ -29,8 +29,8 @@ namespace  dvng::gpio
 
 /* data types */
 
-using pin_t = uint32_t;		/*! \brief  */
-using isr_t = gpio_isr_t;	/*! \brief  */
+using pin_t = uint32_t;		/*! \brief data type representing   */
+using isr_t = gpio_isr_t;	/*! \brief data type representing   */
 
 /* isr_t functions are : static void IRAM_ATTR gpio_isr_handler(void* arg); */
 
