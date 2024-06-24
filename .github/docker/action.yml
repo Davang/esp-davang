@@ -7,7 +7,9 @@ inputs:
     default: 'World'
 outputs:
   file1: # id of output
+    description: ' a file '
   file2: # id of output
+    description: ' a file '
   time: # id of output
     description: 'The time we greeted you'
 runs:
