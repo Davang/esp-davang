@@ -1,5 +1,5 @@
 /*!
- * \file	davang_gpio.h
+ * \file	davang_gpio.hpp
  * \details GPIO abstraction class declaration for ESP-IDF.
  * \author	Davang
  * \version	1.0.0
@@ -10,17 +10,18 @@
 #ifndef ESP_DAVANG_COMPONENTS_DVNG_GPIO_DAVANG_GPIO_H
 #define ESP_DAVANG_COMPONENTS_DVNG_GPIO_DAVANG_GPIO_H
 
-/* C/C++ includes */
-#include <utility>
+/* C includes */
 #include <cstdint>
 
-/* System specific libaries */
+/* C++ includes */
+#include <utility>
+
+/* 3rd party includes */
 #include "driver/gpio.h"
 #include "esp_err.h"
 
-/* Davang includes */
+/* custom includes*/
 
-/* 3rd party includes */
 
 
 /*! Specific davang namespace for gpio data types related. */
@@ -65,8 +66,6 @@ enum class GPIO_INTERRUPT : uint32_t
 	RAISE = GPIO_INTR_POSEDGE,
 	FALL = GPIO_INTR_NEGEDGE,
 	EDGE = GPIO_INTR_ANYEDGE,
-	LOW = GPIO_INTR_LOW_LEVEL,
-	HIGH = GPIO_INTR_HIGH_LEVEL,
 	TOTAL,
 };
 
@@ -84,22 +83,25 @@ constexpr pin MAX_PIN = GPIO_PIN_COUNT;
 /* asssertion structures */
 template< gpio::pin_T T_PIN, gpio::MODE T_MODE, gpio::PULL_UP T_PULLUP, const gpio::PULL_DOWN T_PULL_DOWN, gpio::GPIO_INTERRUPT T_INTERRUPT >
 struct s_asserter
-{	
+{
+
 static constexpr uint64_t OUTPUT_MASK = SOC_GPIO_VALID_OUTPUT_GPIO_MASK;
 static constexpr uint64_t GPIO_MASK = SOC_GPIO_VALID_GPIO_MASK;
 
 static constexpr bool IS_OUTPUT_SUPPORTED = ( 0 != ( ( 1ULL << T_PIN ) & OUTPUT_MASK ) );
-static constexpr bool IS_PIN_VALID = ;
-static constexpr bool IS_MODE_OUTPUT =  ( T_MODE == gpio::MODE::OUTPUT );
+static constexpr bool IS_MODE_OUTPUT = ( T_MODE == gpio::MODE::OUTPUT );
+static constexpr bool IS_MODE_INPUT = ( T_MODE == gpio::MODE::IS_MODE_INPUT );
 
 static_assert( ( ( 0 <= T_PIN ) && ( 0 != ( ( 1ULL << T_PIN) & GPIO_MASK ) ) ), "Not a valid gpio pin number, gpio pin should be less than dvng::gpio::MAX_PIN" );
 
 static_assert( ( T_MODE < gpio::MODE::TOTAL ), "Gpio mode not supported" );
 
-static_assert( ( IS_MODE_OUTPUT == IS_OUTPUT_SUPPORTED ), "Output mode not supported, this pin may only be an input" ); 
+static_assert( ( true == IS_MODE_INPUT ) || ( ( true == IS_MODE_OUTPUT ) && ( true == IS_OUTPUT_SUPPORTED ) ) , "Output mode not supported, this pin may only be an input" ); 
 
-static_assert( ( T_MODE < gpio::PULL_DOWN::TOTAL ), "Gpio pull mode not supported" );
-static_assert( ( T_MODE < gpio::GPIO_INTERRUPT::TOTAL ), "Gpio interrupt mode not supported" );
+static_assert( ( T_MODE < gpio::PULL_DOWN::TOTAL ), "Gpio mode not supported" );
+static_assert( ( T_PULLUP < gpio::PULL_UP::TOTAL ), "Gpio pull up not supported" );
+static_assert( ( T_PULL_DOWN < gpio::PULL_DOWN::TOTAL ), "Gpio pulldown not supported" );
+static_assert( ( T_INTERRUPT < gpio::GPIO_INTERRUPT::TOTAL ), "Gpio interrupt not supported" );
 
 };
 
@@ -138,7 +140,7 @@ template< gpio::pin_T T_PIN, gpio::MODE T_MODE,
 	gpio::PULL_UP T_PULLUP = gpio::PULL_UP::GPIO_PULLUP_DISABLE,
 	gpio::PULL_DOWN T_PULL_DOWN = gpio::PULL_DOWN::GPIO_PULLDOWN_DISABLE, 
 	gpio::GPIO_INTERRUPT T_INTERRUPT = gpio::GPIO_INTERRUPT::GPIO_INTR_DISABLE >
-constexpr c_gpio( const gpio::::asseter< T_PIN, T_MODE, T_PULLUP, T_PULL_DOWN, T_INTERRUPT > ) :  m_gpio_config ( /* pin_bit_mask */ 1ULL << T_PIN,
+constexpr c_gpio( const gpio::s_asserter< T_PIN, T_MODE, T_PULLUP, T_PULL_DOWN, T_INTERRUPT > ) :  m_gpio_config ( /* pin_bit_mask */ 1ULL << T_PIN,
 	/* mode */ static_cast< gpio_mode_t >( T_MODE ),
 	/* pull_up_en */ static_cast< gpio_pullup_t  >( T_PULLUP ),
 	/* pull_down_en */ static_cast< gpio_pulldown_t  >( T_PULLDOWN ),

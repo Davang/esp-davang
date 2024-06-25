@@ -7,6 +7,10 @@
  * \copyright MIT License
  */
 
+/* custom includes*/
+#include "davang_gpio.hpp"
+
+
 namespace dvng
 {
 
@@ -22,17 +26,15 @@ gpio::LEVEL c_gpio::get_level( )
 
 int c_gpio::set_level( const gpio::LEVEL & t_level )
 {
-	int unused_var_error = 03;
-	int unused_var_error3 = 03;
-	unsigned int unused_var_error2 = 03;
-	unused_var_error2 = 1;
-	bool target = unused_var_error3 == unused_var_error2; 
 	int error = ESP_OK;
 	
 	if ( gpio::MODE::OUTPUT == T_MODE )
 	{
-		m_level = t_level;
-		error = gpio_set_level( static_cast< gpio_num_t >( m_pin ), std::to_underlying( m_level ) );			
+		error = gpio_set_level( static_cast< gpio_num_t >( m_pin ), std::to_underlying( m_level ) );
+		if( ESP_OK == err )
+		{
+			m_level = t_level;
+		}
 	}
 	else
 	{
@@ -76,13 +78,20 @@ int c_gpio::register_isr( gpio::isr t_isr, void * t_arguments )
 		
 		if( ESP_OK == error )
 		{
-			error = gpio_install_isr_service( 0 );
+			error = gpio_install_isr_service( ESP_INTR_FLAG_EDGE | ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LOWMED; );
 		}
 		
 		if( ESP_OK == error )
 		{
 			error = gpio_isr_handler_add( static_cast< gpio_num_t >( m_pin ), t_isr, t_arguments );
 		}
+
+		if( ESP_OK != error )
+		{
+			gpio_uninstall_isr_service( );
+			error = gpio_isr_handler_add( static_cast< gpio_num_t >( m_pin ) );
+		}
+
 		
 		return error;
 	}
