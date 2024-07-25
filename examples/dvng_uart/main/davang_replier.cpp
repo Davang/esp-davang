@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "davang_uart.hpp"
 
 #include "freertos/FreeRTOS.h"
@@ -5,19 +6,23 @@
 
 extern "C" void app_main()
 {
-	//vTaskDelay( 25 / portTICK_PERIOD_MS );
 	dvng::c_uart replier = dvng::c_uart( dvng::uart::s_asserter< 0 >( ) );
 	
 	int error = ESP_OK;
-	const char msg[255] = "Hello world!\n";
+	char msg[255] = "Replier ready!\n";
+	size_t size = strlen(msg);
+	error = replier.send( msg, size );
 
 	while( ESP_OK == error )
 	{
-		size_t size = strlen(msg);
-		error = replier.send( msg, size );
-		vTaskDelay( 1'000 / portTICK_PERIOD_MS );
+		size = 255;
+		memset(msg,0,size);
+		if( ESP_OK == replier.receive( msg, size ) )
+		{
+			if( 0 != size )
+			{
+				error = replier.send( msg, size );				
+			}
+		}
 	}
 }
-
-
-

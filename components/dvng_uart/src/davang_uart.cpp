@@ -48,8 +48,7 @@ int c_uart::init( )
 	int error = ESP_OK;
 	if( true == m_is_interrupt )
 	{
-		error = ESP_FAIL;
-		/*
+		
 		error = uart_driver_install(  static_cast<uart_port_t>(m_port), BUFFER_SIZE, BUFFER_SIZE, QUEUE_SIZE, &m_queue, 0);
 			
 		if( ESP_OK == error )
@@ -72,12 +71,12 @@ int c_uart::init( )
 
 		if( ESP_OK == error )
 		{
-			
+			m_should_finish = false;
 			if( pdPASS != xTaskCreate( isr_task, "isr_task", BUFFER_SIZE, this, PRIORITY, &m_isr_task) )
 			{
 				error = ESP_ERR_NOT_ALLOWED;
 			}
-		}*/
+		}
 	}
 	else
 	{
@@ -142,14 +141,12 @@ size_t c_uart::get_input_data_length( )
 
 int c_uart::register_tx_isr( uart::tx_isr_t t_isr )
 {
-	m_should_finish = true;
 	return ESP_OK;
 }
 	
 int c_uart::register_rx_isr( uart::rx_isr_t t_isr )
 {
 
-	m_should_finish = true;
 	return ESP_OK;
 }
 

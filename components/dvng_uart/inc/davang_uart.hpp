@@ -134,7 +134,7 @@ class c_uart
 /* constants */
 public:
 
-static constexpr size_t BUFFER_SIZE = 512;
+static constexpr size_t BUFFER_SIZE = 1024;
 static constexpr size_t QUEUE_SIZE = 32;
 static constexpr UBaseType_t PRIORITY = tskIDLE_PRIORITY + 1;
 static constexpr TickType_t MIN_WAIT = 5 / portTICK_PERIOD_MS;
