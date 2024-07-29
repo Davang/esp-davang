@@ -17,26 +17,24 @@
 /* custom includes*/
 #include "davang_uart.hpp"
 
-
 namespace dvng
 {
 
-void isr_task ( void * t_uart );
 
 c_uart::~c_uart()
 {
 	if( true == m_initalized_on_constructor )
 	{
-		if( true == m_is_interrupt )
+		if( true == m_is_interrupt )  
 		{
-			deresgister_rx_isr( );
-			deresgister_tx_isr( );
+			deregister_isr( );
 			m_should_finish = true;
+			uart_event_t uart_event;
+			uart_event.type = UART_EVENT_MAX;
+			xQueueSend( m_queue, &uart_event, MIN_WAIT );
 			vTaskDelay( MIN_WAIT );
-			vTaskDelete( m_isr_task );
-			vSemaphoreDelete( m_tx_isr_mutex );
-			vSemaphoreDelete( m_rx_isr_mutex );
-		}
+			vSemaphoreDelete( m_isr_mutex );
+			}
 		deinit( );
 	}
 }
@@ -53,28 +51,24 @@ int c_uart::init( )
 			
 		if( ESP_OK == error )
 		{
-			m_tx_isr_mutex = xSemaphoreCreateBinary( );
-			if( nullptr == m_tx_isr_mutex )
+			m_isr_mutex = xSemaphoreCreateMutex( );
+			if( nullptr == m_isr_mutex )
 			{
 				error = ESP_ERR_NOT_ALLOWED;
 			}
 		}
-
-		if( ESP_OK == error )
-		{
-			m_rx_isr_mutex = xSemaphoreCreateBinary( );
-			if( nullptr == m_tx_isr_mutex )
-			{
-				error = ESP_ERR_NOT_ALLOWED;
-			}
-		}
-
 		if( ESP_OK == error )
 		{
 			m_should_finish = false;
-			if( pdPASS != xTaskCreate( isr_task, "isr_task", BUFFER_SIZE, this, PRIORITY, &m_isr_task) )
+			if( pdPASS != xTaskCreate( isr_task, "isr_task", BUFFER_SIZE * 2, this, PRIORITY, &m_isr_task) )
 			{
 				error = ESP_ERR_NOT_ALLOWED;
+			}
+
+			vTaskDelay( MIN_WAIT );
+			if( false == m_is_task_running )
+			{
+				error = ESP_FAIL;
 			}
 		}
 	}
@@ -97,81 +91,139 @@ int c_uart::init( )
 
 void c_uart::deinit( )
 {
-	m_should_finish = true;
+	
 }
 
 int c_uart::send( const void *t_data, size_t & t_length )
 {
-	int result = uart_write_bytes(static_cast<uart_port_t>(m_port), t_data, t_length );
+	int error = ESP_OK;
 
-	if( ESP_FAIL == result )
+	if( ( nullptr == t_data ) || ( 0 >= t_length) )
 	{
-		t_length = 0;
+		error = ESP_ERR_INVALID_ARG;
 	}
 	else
 	{
-		t_length = static_cast<size_t>(result);
-		result = ESP_OK;
+		error = uart_write_bytes(static_cast<uart_port_t>(m_port), t_data, t_length );
+
+		if( ESP_FAIL == error )
+		{
+			t_length = 0;
+		}
+		else
+		{
+			t_length = static_cast<size_t>(error);
+			error = ESP_OK;
+		}
 	}
 
-	return result;
+	return error;
 }
 
 int c_uart::receive( void * t_data, size_t & t_length )
 {
-	int result = uart_read_bytes(static_cast<uart_port_t>(m_port), t_data, static_cast<uint32_t>(t_length), DEFAULT_WAIT);
-
-	if( ESP_FAIL == result )
+	int error = ESP_OK;
+	
+	if( ( nullptr == t_data ) || ( 0 >= t_length) )
 	{
-		t_length = 0;
+		error = ESP_ERR_INVALID_ARG;
 	}
 	else
 	{
-		t_length = static_cast<size_t>(result);
-		result = ESP_OK;
+		error = uart_read_bytes(static_cast<uart_port_t>(m_port), t_data, static_cast<uint32_t>(t_length), DEFAULT_WAIT);
+		
+		if( ESP_FAIL == error )
+		{
+			t_length = 0;
+		}
+		else
+		{
+			t_length = static_cast<size_t>(error);
+			error = ESP_OK;
+		}
 	}
 
-	return result;
+	return error;
 }
 
-size_t c_uart::get_input_data_length( )
+int c_uart::register_isr( uart::isr_t t_isr )
 {
-	return 0;
-}
-
-int c_uart::register_tx_isr( uart::tx_isr_t t_isr )
-{
-	return ESP_OK;
-}
+	int error = ESP_OK;
 	
-int c_uart::register_rx_isr( uart::rx_isr_t t_isr )
-{
-
-	return ESP_OK;
-}
-
-void c_uart::deresgister_rx_isr( )
-{
-
-}
-
-void c_uart::deresgister_tx_isr( )
-{
-
-}
-
-void isr_task ( void * t_uart )
-{
-	if (nullptr == t_uart) 
-		return;
-
-	c_uart * uart = reinterpret_cast<c_uart*>( t_uart );
-
-	while ( false == uart->CheckIfShouldFinish( ) )
+	if( true == static_cast<bool>(t_isr) )
 	{
-		vTaskDelay( 100'000 / portTICK_PERIOD_MS );
+		if( pdTRUE == xSemaphoreTake( m_isr_mutex, DEFAULT_WAIT ) )
+		{
+			m_isr_callback = t_isr;
+        	(void)xSemaphoreGive( m_isr_mutex );
+		}
+		else
+		{
+			error = ESP_ERR_NOT_ALLOWED;
+		}
+	}
+	else
+	{
+		error = ESP_ERR_INVALID_ARG;
 	}
 
+	return error;
+}
+
+
+void c_uart::deregister_isr( )
+{
+	if( pdTRUE == xSemaphoreTake( m_isr_mutex, DEFAULT_WAIT ) )
+	{
+		m_isr_callback = nullptr;
+    	(void)xSemaphoreGive( m_isr_mutex );
+	}
+}
+
+void c_uart::wait_for_message_isr( )
+{
+	while ( false == m_should_finish )
+	{
+		uart_event_t event;
+		if ( pdTRUE == xQueueReceive( m_queue, &event, MAX_WAIT ) )
+		{
+		 	if ( UART_DATA == event.type )
+	 		{	 
+	 			size_t event_size = event.size;
+	 			while( 0 < event_size )
+	 			{
+					uint8_t buffer[BUFFER_SIZE] = {};
+	 				size_t size = ( ( BUFFER_SIZE < event_size ) ? BUFFER_SIZE : event_size );
+					size = uart_read_bytes(static_cast<uart_port_t>(m_port), buffer, static_cast<uint32_t>(size), DEFAULT_WAIT);
+					if( ( ESP_FAIL != size ) && ( true == static_cast<bool>(m_isr_callback)) )
+					{
+						if( pdTRUE == xSemaphoreTake( m_isr_mutex, DEFAULT_WAIT ) )
+						{
+							m_isr_callback( buffer, size );
+    						(void)xSemaphoreGive( m_isr_mutex );
+						}
+					}				
+					event_size -= size;
+	 			}
+	 		}
+		}
+	} // end of while
+}
+
+void c_uart::isr_task ( void * t_uart )
+{
+	if ( nullptr != t_uart) 
+	{
+		c_uart * uart = reinterpret_cast<c_uart*>( t_uart );
+
+		uart->m_is_task_running = true;
+	
+		uart->wait_for_message_isr( );
+		
+		uart->m_is_task_running = false;
+	}
+
+	vTaskDelete( nullptr );
 }
 
 

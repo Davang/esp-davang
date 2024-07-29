@@ -38,8 +38,7 @@ namespace  dvng::uart
 /* data types */
 using port_t = uint32_t;		/*! \brief data type representing  uart port */
 
-using tx_isr_t = std::function<void(void)>;								/*! \brief data type representing tx empty buffer interrupt */
-using rx_isr_t = std::function<void(const void*, uint32_t)>;		/*! \brief data type representing rx empty buffer interrupt */
+using isr_t = std::function<void(const void*, size_t)>;		/*! \brief data type representing rx empty buffer interrupt */
 
 
 /* enumerators */
@@ -91,9 +90,7 @@ enum class HW_CONTROL : uint32_t
 enum class INTERRUPT_BUFFER : uint32_t
 {
 	NONE = 0x00,
-	RX_FULL = UART_INTR_RXFIFO_FULL,
-	TX_EMPTY = UART_INTR_TXFIFO_EMPTY,
-	TX_RX = UART_INTR_TXFIFO_EMPTY | UART_INTR_RXFIFO_FULL,
+	RX,
 	TOTAL,
 };
 
@@ -136,15 +133,16 @@ public:
 
 static constexpr size_t BUFFER_SIZE = 1024;
 static constexpr size_t QUEUE_SIZE = 32;
+
+protected:
 static constexpr UBaseType_t PRIORITY = tskIDLE_PRIORITY + 1;
 static constexpr TickType_t MIN_WAIT = 5 / portTICK_PERIOD_MS;
-static constexpr TickType_t MAX_WAIT = 5000 / portTICK_PERIOD_MS;
+static constexpr TickType_t MAX_WAIT = 20'000 / portTICK_PERIOD_MS;
 static constexpr TickType_t DEFAULT_WAIT = 100 / portTICK_PERIOD_MS;
 
 private:
 const uart_config_t m_config;
 const uart::port_t m_port;
-const uart::INTERRUPT_BUFFER m_interrupt;
 const bool m_is_interrupt;
 const bool m_initalized_on_constructor;
 
@@ -152,16 +150,13 @@ const bool m_initalized_on_constructor;
 private:
 
 std::atomic<bool> m_should_finish;
+std::atomic<bool> m_is_task_running;
 
 TaskHandle_t m_isr_task;
-
-SemaphoreHandle_t m_tx_isr_mutex;
-SemaphoreHandle_t m_rx_isr_mutex;
-
 QueueHandle_t m_queue;
 
-uart::tx_isr_t m_tx_isr;
-uart::rx_isr_t m_rx_isr;
+SemaphoreHandle_t m_isr_mutex;
+uart::isr_t m_isr_callback;
 
 /* constructors and destructor */
 public:
@@ -193,13 +188,11 @@ c_uart( const uart::s_asserter< T_PORT, T_BRATE, T_WORD_LENGTH, T_PARITY, T_STOP
 		.source_clk = UART_SCLK_DEFAULT
 	},
 	m_port{T_PORT},
-	m_interrupt{T_INTERRUPT},
 	m_is_interrupt{ ( ( uart::INTERRUPT_BUFFER::NONE < T_INTERRUPT ) && ( uart::INTERRUPT_BUFFER::TOTAL > T_INTERRUPT) ) },
 	m_initalized_on_constructor{ t_should_init },
 	m_should_finish{true},
 	m_isr_task{nullptr},
-	m_tx_isr_mutex{nullptr},
-	m_rx_isr_mutex{nullptr}
+	m_isr_mutex{nullptr}
 {
 	if( true == m_initalized_on_constructor )
 	{
@@ -241,24 +234,14 @@ public:
 	[[nodiscard("Always ensure valid uart initialization")]]
 	int receive( void * t_data, size_t & t_length );
 
-	[[nodiscard("Always ensure valid uart initialization")]]
-	size_t get_input_data_length( );
-
 	[[nodiscard("Always ensure correct isr registration ")]]
-	int register_tx_isr( uart::tx_isr_t t_isr );
-	
-	[[nodiscard("Always ensure correct isr registration ")]]
-	int register_rx_isr( uart::rx_isr_t t_isr );
+	int register_isr( uart::isr_t t_isr );
 
-	void deresgister_rx_isr( );
+	void deregister_isr( );
 
-	void deresgister_tx_isr( );
-
-	inline bool CheckIfShouldFinish ( ) const
-	{
-		return m_should_finish;
-	}
-
+private:
+	void wait_for_message_isr( );
+	static void isr_task ( void * t_uart );
 };
 
 
