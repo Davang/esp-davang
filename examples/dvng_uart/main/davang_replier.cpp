@@ -23,6 +23,8 @@ extern "C" void app_main()
 	
 	int error = ESP_OK;
 
+	error = replier.configure_pins( 12, 11 );
+
 	dvng::uart::isr_t callback_func = std::bind(&callback, &replier, std::placeholders::_1, std::placeholders::_2);
 	error = replier.register_isr( callback_func );
 

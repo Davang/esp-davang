@@ -226,6 +226,9 @@ public:
 	[[nodiscard("Always ensure valid uart initialization")]]
 	int init( );
 
+	[[nodiscard("Always ensure valid ping configuration")]]
+	int configure_pins( int tx_pin, int rx_pin );
+
 	void deinit( );
 
 	[[nodiscard("Always ensure valid uart initialization")]]

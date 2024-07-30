@@ -25,16 +25,6 @@ c_uart::~c_uart()
 {
 	if( true == m_initalized_on_constructor )
 	{
-		if( true == m_is_interrupt )  
-		{
-			deregister_isr( );
-			m_should_finish = true;
-			uart_event_t uart_event;
-			uart_event.type = UART_EVENT_MAX;
-			xQueueSend( m_queue, &uart_event, MIN_WAIT );
-			vTaskDelay( MIN_WAIT );
-			vSemaphoreDelete( m_isr_mutex );
-			}
 		deinit( );
 	}
 }
@@ -84,15 +74,36 @@ int c_uart::init( )
 
 	if( ESP_OK == error )
 	{
-		uart_set_pin( static_cast<uart_port_t>(m_port), UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+		error = uart_set_pin( static_cast<uart_port_t>(m_port), UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 	}
+
 	return error;
+}
+
+
+int c_uart::configure_pins( int tx_pin, int rx_pin )
+{
+	return uart_set_pin( static_cast<uart_port_t>(m_port), tx_pin, rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 }
 
 void c_uart::deinit( )
 {
-	
+	if( true == m_is_interrupt )  
+	{
+		deregister_isr( );
+		m_should_finish = true;
+		uart_event_t uart_event;
+		uart_event.type = UART_EVENT_MAX;
+		xQueueSend( m_queue, &uart_event, MIN_WAIT );
+		vTaskDelay( MIN_WAIT );
+		vSemaphoreDelete( m_isr_mutex );
+	}
+
+	(void)uart_driver_delete( static_cast< uart_port_t >( m_port ) );
 }
+
+
+
 
 int c_uart::send( const void *t_data, size_t & t_length )
 {
