@@ -6,4 +6,4 @@ set(COMPONENTS main)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
-project( davang_logger_example )
+project( davang_uart_stream_ex )
