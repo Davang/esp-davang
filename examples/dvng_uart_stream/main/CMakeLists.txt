@@ -1,3 +1,3 @@
-idf_component_register(SRCS "davang_logger_example.cpp"
+idf_component_register(SRCS "davang_uart_stream_ex.cpp"
                        INCLUDE_DIRS "."
-                       REQUIRES dvng_logger  )
+                       REQUIRES dvng_uart_stream  )

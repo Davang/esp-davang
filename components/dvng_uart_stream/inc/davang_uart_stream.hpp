@@ -7,11 +7,15 @@
  * \copyright MIT License
  */
 
-#ifndef ESP_DAVANG_COMPONENTS_DVNG_GPIO_DAVANG_UART_H
+#ifndef ESP_DAVANG_COMPONENTS_DVNG_UART_STREAM_DAVANG_UART_STREAM_H
+#define ESP_DAVANG_COMPONENTS_DVNG_UART_STREAM_DAVANG_UART_STREAM_H
 
 /* C includes */
 
 /* C++ includes */
+#include <concepts>
+#include <string>
+
 
 /* 3rd party includes */
 
@@ -98,7 +102,7 @@ private:
 
 uart_stream::BIN_FMT           m_bin_fmt;
 uart_stream::HEX_FMT           m_hex_fmt;
-uart_stream::SEP_FMT           m_decimal_separator;
+uart_stream::SEP_FMT           m_sep_fmt;
 uart_stream::FMT               m_fmt;
 uart_stream::s_bool_fmt        m_bool_fmt;
 uart_stream::s_float_point_fmt m_float_point_fmt;
@@ -118,22 +122,22 @@ c_uart_stream( const c_uart_stream && ) = delete;
 virtual ~c_uart_stream( );
 
 
-c_uart_stream & operator<<( const BIN_FMT & t_bin_fmt );
+c_uart_stream & operator<<( const uart_stream::BIN_FMT & t_bin_fmt );
 
 
-c_uart_stream & operator<<( const HEX_FMT & t_hex_fmt );
+c_uart_stream & operator<<( const uart_stream::HEX_FMT & t_hex_fmt );
 
 
-c_uart_stream & operator<<( const SEP_FMT & t_dec_fmt );
+c_uart_stream & operator<<( const uart_stream::SEP_FMT & t_dec_fmt );
 
 
-c_uart_stream & operator<<( const FMT & t_fmt );
+c_uart_stream & operator<<( const uart_stream::FMT & t_fmt );
 
 
-c_uart_stream & operator<<( const s_bool_fmt & t_bol_fmt );
+c_uart_stream & operator<<( const uart_stream::s_bool_fmt & t_bol_fmt );
 
 
-c_uart_stream & operator<<( const s_float_point_fmt & t_float_point_fmt );
+c_uart_stream & operator<<( const uart_stream::s_float_point_fmt & t_float_point_fmt );
 
 
 c_uart_stream & operator<<( const void * Text );
@@ -159,3 +163,5 @@ c_uart_stream & operator<<( const std::floating_point auto & Text );
 
 
 }
+
+#endif /* ESP_DAVANG_COMPONENTS_DVNG_UART_STREAM_DAVANG_UART_STREAM_H */
