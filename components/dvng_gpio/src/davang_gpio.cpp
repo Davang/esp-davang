@@ -7,6 +7,13 @@
  * \copyright MIT License
  */
 
+/* C includes */
+
+/* C++ includes */
+
+/* 3rd party includes */
+#include "esp_err.h"
+
 /* custom includes*/
 #include "davang_gpio.hpp"
 
@@ -16,17 +23,44 @@ namespace dvng
 
 c_gpio::~c_gpio( )
 {
-	// do nothing you are responsible of deinitialize the pin
-}
-
-int c_gpio::deinit( )
-{
-	return  gpio_reset_pin( static_cast< gpio_num_t >( m_pin ) );
+	if( true == m_initalized_on_constructor )
+	{
+		if( true == m_is_interrupt )
+		{
+			deregister_isr( );
+		}
+		deinit( );
+	}
 }
 
 int c_gpio::init( )
 {
-	return  gpio_config( &m_gpio_config );
+	int error =  gpio_config( &m_config );
+
+	if( ( true == m_is_interrupt ) && ( ESP_OK == error ) )
+	{
+		error = gpio_set_intr_type(static_cast< gpio_num_t >( m_pin ), static_cast< gpio_int_type_t >( m_interrupt ));
+
+		if( ESP_OK == error )
+		{
+			error = gpio_install_isr_service( ESP_INTR_FLAG_EDGE | ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LOWMED );
+		}
+	}
+
+	if( ESP_OK != error )
+	{
+		deinit( );
+	}
+
+	return error;
+}
+
+
+void c_gpio::deinit( )
+{
+	gpio_reset_pin( static_cast< gpio_num_t >( m_pin ) );
+	gpio_intr_disable( static_cast< gpio_num_t >( m_pin ) );
+	gpio_uninstall_isr_service( );
 }
 
 gpio::LEVEL c_gpio::get_level( )
@@ -38,17 +72,22 @@ int c_gpio::set_level( const gpio::LEVEL & t_level )
 {
 	int error = ESP_OK;
 	
-	if ( gpio::MODE::OUTPUT == m_mode )
+	if ( gpio::MODE::OUTPUT != m_mode )
 	{
-		error = gpio_set_level( static_cast< gpio_num_t >( m_pin ), std::to_underlying( m_level ) );
-		if( ESP_OK == error )
-		{
-			m_level = t_level;
-		}
+		error = ESP_ERR_NOT_SUPPORTED;
+	}
+	else if ( gpio::LEVEL::TOTAL <= t_level )
+	{
+		error = ESP_ERR_INVALID_ARG;
 	}
 	else
 	{
-		error = ESP_ERR_NOT_SUPPORTED;
+		error = gpio_set_level( static_cast< gpio_num_t >( m_pin ), static_cast<uint32_t>( m_level ) );
+	}
+
+	if( ESP_OK == error )
+	{
+		m_level = t_level;
 	}
 
 	return error;
@@ -78,32 +117,34 @@ int c_gpio::toggle( )
 
 int c_gpio::register_isr( gpio::isr_t t_isr, void * t_arguments )
 {
-	if ( gpio::GPIO_INTERRUPT::NONE == m_interrupt )
+	esp_err_t error;
+	
+	if( true == m_is_interrupt )
 	{
-		return ESP_ERR_NOT_SUPPORTED;
+		if( true == static_cast<bool>(t_isr) )
+		{
+			gpio_isr_t isr = *(t_isr.target<void(*)(void*)>());
+			error = gpio_isr_handler_add( static_cast< gpio_num_t >( m_pin ), isr, t_arguments );
+		}
+		else
+		{	
+			error = ESP_ERR_INVALID_ARG;
+		}
 	}
 	else
-	{			
-		esp_err_t error = gpio_set_intr_type(static_cast< gpio_num_t >( m_pin ), static_cast< gpio_int_type_t >( m_interrupt ));
-		
-		if( ESP_OK == error )
-		{
-			error = gpio_install_isr_service( ESP_INTR_FLAG_EDGE | ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LOWMED );
-		}
-		
-		if( ESP_OK == error )
-		{
-			error = gpio_isr_handler_add( static_cast< gpio_num_t >( m_pin ), t_isr, t_arguments );
-		}
+	{
+		error = ESP_ERR_NOT_SUPPORTED;
+	}
 
-		if( ESP_OK != error )
-		{
-			error = gpio_isr_handler_remove( static_cast< gpio_num_t >( m_pin ) );
-			gpio_uninstall_isr_service( );
-		}
+	return error;
+}
 
-		
-		return error;
+
+void c_gpio::deregister_isr( )
+{
+	if( true == m_is_interrupt )
+	{
+		(void)gpio_isr_handler_remove( static_cast< gpio_num_t >( m_pin ) );
 	}
 }
 
