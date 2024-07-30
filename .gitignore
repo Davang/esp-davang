@@ -34,5 +34,6 @@
 # build
 build/
 
-# config
-sdkconfig*
+#old files
+*.old
+
