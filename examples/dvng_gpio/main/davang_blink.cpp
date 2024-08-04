@@ -4,7 +4,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-extern "C" void app_main(){
+extern "C" void app_main()
+{
 	std::array<dvng::c_gpio, 2> output_pins {
 		dvng::c_gpio( dvng::gpio::s_asserter< 18, dvng::gpio::MODE::OUTPUT >( ) ),
 		dvng::c_gpio( dvng::gpio::s_asserter< 41, dvng::gpio::MODE::OUTPUT >( ) )

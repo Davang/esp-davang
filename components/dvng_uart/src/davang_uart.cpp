@@ -131,6 +131,27 @@ int c_uart::send( const void *t_data, size_t & t_length )
 	return error;
 }
 
+int c_uart::send( const void *t_data, const size_t & t_length )
+{
+	int error = ESP_OK;
+
+	if( ( nullptr == t_data ) || ( 0 >= t_length) )
+	{
+		error = ESP_ERR_INVALID_ARG;
+	}
+	else
+	{
+		error = uart_write_bytes(static_cast<uart_port_t>(m_port), t_data, t_length );
+
+		if( ESP_FAIL != error )
+		{
+			error = ESP_OK;
+		}
+	}
+
+	return error;
+}
+
 int c_uart::receive( void * t_data, size_t & t_length )
 {
 	int error = ESP_OK;

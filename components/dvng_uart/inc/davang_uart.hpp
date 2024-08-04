@@ -7,8 +7,8 @@
  * \copyright MIT License
  */
 
-#ifndef ESP_DAVANG_COMPONENTS_DVNG_GPIO_DAVANG_UART_H
-#define ESP_DAVANG_COMPONENTS_DVNG_GPIO_DAVANG_UART_H
+#ifndef ESP_DAVANG_COMPONENTS_DVNG_UART_DAVANG_UART_H
+#define ESP_DAVANG_COMPONENTS_DVNG_UART_DAVANG_UART_H
 
 /* C includes */
 #include <cstdint>
@@ -128,7 +128,7 @@ namespace dvng
 
 class c_uart
 {
-/* constants */
+/* constant expressions */
 public:
 
 static constexpr size_t BUFFER_SIZE = 1024;
@@ -141,6 +141,11 @@ static constexpr TickType_t MAX_WAIT = 20'000 / portTICK_PERIOD_MS;
 static constexpr TickType_t DEFAULT_WAIT = 100 / portTICK_PERIOD_MS;
 
 private:
+
+/* constants*/
+
+private:
+
 const uart_config_t m_config;
 const uart::port_t m_port;
 const bool m_is_interrupt;
@@ -235,6 +240,9 @@ public:
 	int send( const void * t_data, size_t & t_length );
 
 	[[nodiscard("Always ensure valid uart initialization")]]
+	int send( const void * t_data, const size_t & t_length );
+
+	[[nodiscard("Always ensure valid uart initialization")]]
 	int receive( void * t_data, size_t & t_length );
 
 	[[nodiscard("Always ensure correct isr registration ")]]
@@ -250,4 +258,4 @@ private:
 
 } /* namespace dvng */
 
-#endif /* ESP_DAVANG_COMPONENTS_DVNG_GPIO_DAVANG_UART_H */
+#endif /* ESP_DAVANG_COMPONENTS_DVNG_UART_DAVANG_UART_H */
