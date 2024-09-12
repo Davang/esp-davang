@@ -35,9 +35,11 @@ Execute [Initialize-Davang.ps1](./Initialize-Davang.ps1) and all esp variables, 
 
 It sets custom davang and esp-idf enviroment variables. After it try to compile one of the [examples](./examples). 
 
+This  shortcut may be attached to windows start menu or placed on the Desktop whenever you prefer, or as command line in a profile in terminal application.
+
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -NoExit -File " $HOME\esp-davang\Initialize-Davang.ps1"
+powershell.exe -ExecutionPolicy Bypass -NoExit -File " %USERPROFILE%\esp-davang\Initialize-Davang.ps1"
 ```
 
 ---
