@@ -22,6 +22,24 @@ Add `list(APPEND EXTRA_COMPONENT_DIRS "${DAVANG_COMPONENT_DIRS}")` to your proje
 
 Just what the name says it is, examples.
 
+## Linux
+
+Execute [export.sh](./export.sh) it relies on [get_idf alias](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/linux-macos-setup.html#step-4-set-up-the-environment-variables).
+
+It sets custom davang and esp-idf enviroment variables. After it try to compile one of the [examples](./examples). 
+
+
+## Windows
+
+Execute [Initialize-Davang.ps1](./Initialize-Davang.ps1) and all esp variables, it relies on `\Initialize-Idf.ps1` script and that esp-idf was installed at home.
+
+It sets custom davang and esp-idf enviroment variables. After it try to compile one of the [examples](./examples). 
+
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -NoExit -File " $HOME\esp-davang\Initialize-Davang.ps1"
+```
+
 ---
 
 Davang
