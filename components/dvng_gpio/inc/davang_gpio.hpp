@@ -74,7 +74,7 @@ enum class INTERRUPT_CHANGE : uint32_t
 enum class LEVEL : uint32_t
 {
 	LOW = 0,
-	HIGH = 1,
+	HIGH,
 	TOTAL,
 };
 
@@ -83,32 +83,58 @@ enum class LEVEL : uint32_t
 /*!< Specific davang namespace for gpio data types related. */
 constexpr pin_t MAX_PIN = GPIO_PIN_COUNT;
 
+
 /* asssertion structures */
+template< typename T, T VAL >
+struct s_enum_validator
+{
+    static_assert( ( VAL < T::TOTAL ) );
+};
+
+
+template< pin_t T_PIN >
+struct s_pin
+{
+	static constexpr pin_t M_PIN = T_PIN;
+	static_assert( ( ( 0 <= M_PIN ) && ( 0 != ( ( 1ULL << M_PIN) & SOC_GPIO_VALID_GPIO_MASK ) ) ), "Not a valid gpio pin number" );
+};
+
+
+
+template< MODE T_MODE >
+struct s_mode : s_enum_validator<MODE, T_MODE>
+{
+	static constexpr MODE M_MODE = T_MODE;
+};
+
+
+template< PULL_UP T_PULL_UP >
+struct s_pull_up : s_enum_validator<PULL_UP, T_PULL_UP>
+{
+	static constexpr PULL_UP M_PULL_UP = T_PULL_UP;
+};
+
+template< PULL_DOWN T_PULL_DOWN >
+struct s_pull_down 
+{
+	static constexpr PULL_DOWN M_PULL_DOWN = T_PULL_DOWN;
+};
+
+
+template< INTERRUPT_CHANGE T_INTERRUPT = INTERRUPT_CHANGE::NONE >
+struct s_interrupt : s_enum_validator<INTERRUPT_CHANGE, T_INTERRUPT>
+{
+	static constexpr INTERRUPT_CHANGE M_INTERRUPT = T_INTERRUPT;
+};
+
 template< pin_t T_PIN, MODE T_MODE, 
 	PULL_UP T_PULL_UP = PULL_UP::NONE,
 	PULL_DOWN T_PULL_DOWN = PULL_DOWN::NONE, 
 	INTERRUPT_CHANGE T_INTERRUPT = INTERRUPT_CHANGE::NONE >
-struct s_asserter
+struct s_config : public s_pin<T_PIN>, s_mode<T_MODE>, s_pull_up<T_PULL_UP>, s_pull_down<T_PULL_DOWN>, s_interrupt<T_INTERRUPT>
 {
-
-static constexpr uint64_t OUTPUT_MASK = SOC_GPIO_VALID_OUTPUT_GPIO_MASK;
-static constexpr uint64_t GPIO_MASK = SOC_GPIO_VALID_GPIO_MASK;
-
-static constexpr bool IS_OUTPUT_SUPPORTED = ( 0 != ( ( 1ULL << T_PIN ) & OUTPUT_MASK ) );
-static constexpr bool IS_MODE_OUTPUT = ( T_MODE == MODE::OUTPUT );
-static constexpr bool IS_MODE_INPUT = ( T_MODE == MODE::INPUT );
-
-static_assert( ( ( 0 <= T_PIN ) && ( 0 != ( ( 1ULL << T_PIN) & GPIO_MASK ) ) ), "Not a valid gpio pin number, gpio pin should be less than dvng::MAX_PIN" );
-
-static_assert( ( T_MODE < MODE::TOTAL ), "Gpio mode not supported" );
-
-static_assert( ( true == IS_MODE_INPUT ) || ( ( true == IS_MODE_OUTPUT ) && ( true == IS_OUTPUT_SUPPORTED ) ) , "Output mode not supported, this pin may only be an input" ); 
-
-static_assert( ( T_MODE < MODE::TOTAL ), "GPIO mode not supported" );
-static_assert( ( T_PULL_UP < PULL_UP::TOTAL ), "GPIO pull up not supported" );
-static_assert( ( T_PULL_DOWN < PULL_DOWN::TOTAL ), "GPIO pulldown not supported" );
-static_assert( ( T_INTERRUPT < INTERRUPT_CHANGE::TOTAL ), "GPIO interrupt not supported" );
-
+	static constexpr bool IS_OUTPUT_SUPPORTED = ( 0 != ( ( 1ULL << T_PIN ) & SOC_GPIO_VALID_OUTPUT_GPIO_MASK ) );
+	static_assert( ( T_MODE == MODE::INPUT ) || ( ( T_MODE == MODE::OUTPUT ) && ( true == IS_OUTPUT_SUPPORTED ) ) , "Output mode not supported, this pin may only be an input" ); 
 };
 
 
@@ -124,11 +150,9 @@ class c_gpio
 /* constants */
 private:
 	const gpio_config_t m_config;
-	const gpio::pin_t m_pin;
+	const gpio_num_t m_pin;
 	const gpio::MODE m_mode;
-	const gpio::INTERRUPT_CHANGE m_interrupt;
 	const bool m_is_interrupt;
-	const bool m_initalized_on_constructor;
 /* data members */
 private:
 	gpio::LEVEL m_level;
@@ -145,43 +169,37 @@ c_gpio( const c_gpio && ) = delete;
 /*!
  * \ brief c_gpio constructor 
  */
-template< gpio::pin_t T_PIN, gpio::MODE T_MODE, 
-	gpio::PULL_UP T_PULL_UP, gpio::PULL_DOWN T_PULL_DOWN, 
-	gpio::INTERRUPT_CHANGE T_INTERRUPT >
-c_gpio( const gpio::s_asserter< T_PIN, T_MODE, T_PULL_UP, T_PULL_DOWN, T_INTERRUPT > &, const bool t_should_init ) :
+template< auto ... ARGS_T >
+c_gpio( const gpio::s_config< ARGS_T... > & t_config) :
 	m_config {
-		.pin_bit_mask = 1ULL << T_PIN,
-		.mode = static_cast< gpio_mode_t >( T_MODE ),
-		.pull_up_en = static_cast< gpio_pullup_t  >( T_PULL_UP ),
-		.pull_down_en = static_cast< gpio_pulldown_t  >( T_PULL_DOWN ),
-		.intr_type = static_cast< gpio_int_type_t  >( T_INTERRUPT )
+		.pin_bit_mask = 1ULL << gpio::s_config< ARGS_T... > ::M_PIN,
+		.mode = static_cast< gpio_mode_t >( gpio::s_config< ARGS_T... > ::M_MODE ),
+		.pull_up_en = static_cast< gpio_pullup_t  >( gpio::s_config< ARGS_T... > ::M_PULL_UP ),
+		.pull_down_en = static_cast< gpio_pulldown_t  >( gpio::s_config< ARGS_T... > ::M_PULL_DOWN ),
+		.intr_type = static_cast< gpio_int_type_t  >( gpio::s_config< ARGS_T... > ::M_INTERRUPT ),
 	},
-	m_pin { T_PIN },
-	m_mode { T_MODE },
-	m_interrupt { T_INTERRUPT },
-	m_is_interrupt{ ( ( gpio::INTERRUPT_CHANGE::NONE < T_INTERRUPT ) && ( gpio::INTERRUPT_CHANGE::TOTAL > T_INTERRUPT) ) },
-	m_initalized_on_constructor{t_should_init},
+	m_pin { static_cast<gpio_num_t>( gpio::s_config< ARGS_T... >::M_PIN ) },
+	m_mode { gpio::s_config< ARGS_T... >::M_MODE },
+	m_is_interrupt{ gpio::s_config< ARGS_T... >::M_INTERRUPT !=  gpio::INTERRUPT_CHANGE::NONE },
 	m_level { gpio::LEVEL::LOW }
 {
-	if( true == m_initalized_on_constructor )
+	int error = gpio_config( &m_config );
+
+	if( ( true == m_is_interrupt ) && ( ESP_OK == error ) )
 	{
-		if( ESP_OK != init( ) )
+		error = gpio_set_intr_type( m_pin, static_cast< gpio_int_type_t >( gpio::s_config< ARGS_T... >::M_INTERRUPT ));
+
+		if( ESP_OK == error )
 		{
-			esp_restart( );
+			error = gpio_install_isr_service( ESP_INTR_FLAG_EDGE | ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LOWMED );
 		}
 	}
+
+	if( ESP_OK != error )
+	{
+		esp_restart( );
+	}
 }
-
-template< gpio::pin_t T_PIN, gpio::MODE T_MODE, 
-	gpio::PULL_UP T_PULL_UP, gpio::PULL_DOWN T_PULL_DOWN, 
-	gpio::INTERRUPT_CHANGE T_INTERRUPT >
-c_gpio( const gpio::s_asserter< T_PIN, T_MODE, T_PULL_UP, T_PULL_DOWN, T_INTERRUPT > & t_config ) :
-	c_gpio( t_config, true )
-{
-
-}
-
-
 
 virtual ~c_gpio( );
 
@@ -189,27 +207,37 @@ virtual ~c_gpio( );
 /* methods */
 public:	
 	
-	[[nodiscard("Always ensure valid pin initialization")]]
-	int init( );
-
-	void deinit( );
-
 	[[nodiscard("Why get the level of a pin if not using it?")]]
 	gpio::LEVEL get_level( );
 
 	int set_level( const gpio::LEVEL & t_level );
 	
-	int set_high( ) ;
+	inline int set_high( )
+	{
+		return set_level( gpio::LEVEL::HIGH );
+	}
 	
-	int set_low( );
+	inline int set_low( )
+	{
+		return set_level( gpio::LEVEL::LOW );
+	}
 	
-	int toggle( );
+	inline int toggle( )
+	{
+		if( gpio::LEVEL::LOW == m_level )
+		{
+			return set_high( );
+		}
+		else
+		{
+			return set_low( );	
+		}
+	}
 
 	[[nodiscard("Always ensure correct isr registration ")]]
 	int register_isr( gpio::isr_t t_isr, void * t_arguments );
 	
 	void deregister_isr( );
-
 
 };
 
