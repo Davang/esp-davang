@@ -18,6 +18,8 @@ I used this classes for a few time, and they are helpfull to me, I hope they to 
 This directory has all componets, each have a unique folder with _dvng_ as prefix this way they may nor result in conflict with any other component.
 Add `list(APPEND EXTRA_COMPONENT_DIRS "${DAVANG_COMPONENT_DIRS}")` to your project.
 
+clang-format -i --style=file --files=.clang-files
+
 ## Examples
 
 Just what the name says it is, examples.
