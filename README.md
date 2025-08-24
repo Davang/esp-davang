@@ -1,12 +1,14 @@
 # esp-davang
 
 Custom classes to wrap around esp-idf. The main idea is not make it faster neither lighter but try to use `c++` features to ease future implementations.
-For example compile checking validity of peripherals configurations. Improve memory safety like using `std::string` instead of `char*`.
+For example compile checking validity of peripherals configurations. Avoid using raw pointers and use the Standard Template Library and custom classes as parameters.
 
 As with esp-idf an export script is given to ease its use. It exports two variables, `DAVANG_ESP` and `DAVANG_COMPONENT_DIRS`.
 
 * `DAVANG_ESP` : the path to the esp-davang directory base of the repository.
 * `DAVANG_COMPONENT_DIRS` : the path to the components directory base of the.
+
+It also add the tools directory to you path so you may run any tool within it.
 
 I know writting a warp over an already HAL/BSP libary makes no sense, as for that reason you may use the existing one already.
 My classes remove some funciontality, will ad some overhead to the code, and not be as tested as esp-idf.
@@ -15,34 +17,16 @@ I used this classes for a few time, and they are helpfull to me, I hope they to 
 
 ## Components
 
-This directory has all componets, each have a unique folder with _dvng_ as prefix this way they may nor result in conflict with any other component.
-Add `list(APPEND EXTRA_COMPONENT_DIRS "${DAVANG_COMPONENT_DIRS}")` to your project.
+This directory has all componets, each have a unique folder with _dvng\__ as prefix this way they may nor result in conflict with any other component.
+Check [esp-idf explanantion](https://docs.espressif.com/projects/esp-idf/en/v5.4.1/esp32/migration-guides/release-5.x/5.0/build-system.html#setting-component-dirs-and-extra-component-dirs-variables) on how to add extra directories for component search. Then it is possible to list any of this components as it were one from the esp-idf.
 
-clang-format -i --style=file --files=.clang-files
+## Style
 
-## Examples
-
-Just what the name says it is, examples.
+I use uncrustify for styling. Check the [configuration file](tools/etc/uncrustify.cfg). Run [`dvng_format.sh`](tools/dvng_format.sh) for formatting the files.
 
 ## Linux
 
-Execute [export.sh](./export.sh) it relies on [get_idf alias](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/linux-macos-setup.html#step-4-set-up-the-environment-variables).
-
-It sets custom davang and esp-idf enviroment variables. After it try to compile one of the [examples](./examples). 
-
-
-## Windows
-
-Execute [Initialize-Davang.ps1](./Initialize-Davang.ps1) and all esp variables, it relies on `\Initialize-Idf.ps1` script and that esp-idf was installed at home.
-
-It sets custom davang and esp-idf enviroment variables. After it try to compile one of the [examples](./examples). 
-
-This  shortcut may be attached to windows start menu or placed on the Desktop whenever you prefer, or as command line in a profile in terminal application.
-
-
-```powershell
-powershell.exe -ExecutionPolicy Bypass -NoExit -File " %USERPROFILE%\esp-davang\Initialize-Davang.ps1"
-```
+Source [export.sh](./export.sh) it relies on [get_idf alias](https://docs.espressif.com/projects/esp-idf/en/v5.4.1/esp32/get-started/linux-macos-setup.html#step-3-set-up-the-tools). Then try to compile one of the [examples](examples/). 
 
 ---
 
