@@ -10,7 +10,7 @@ list_dirs()
 	echo $(find $1 -mindepth 1 -maxdepth 1 -type d )
 }
 
-list_files()
+list_cpp_source_files()
 {
 	echo $(find $1 -not -path "$1/build/*" -regex '.*\.\(c\|cpp\|h\|hpp\)$' )
 }
@@ -22,7 +22,7 @@ do
 	for dir in $(list_dirs $top_dir);
 	do
 		files+=' '
-		files+=$(list_files $dir );
+		files+=$(list_cpp_source_files $dir );
 	done
 done
 
