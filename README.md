@@ -26,7 +26,16 @@ I use uncrustify for styling. Check the [configuration file](tools/etc/uncrustif
 
 ## Linux
 
-Source [export.sh](./export.sh) it relies on [get_idf alias](https://docs.espressif.com/projects/esp-idf/en/v5.4.1/esp32/get-started/linux-macos-setup.html#step-3-set-up-the-tools). Then try to compile one of the [examples](examples/). 
+Source [export.sh](./export.sh). Then try to compile one of the [examples](examples/). 
+
+ESP-IDF recommends setting the [get_idf alias](https://docs.espressif.com/projects/esp-idf/en/v5.4.1/esp32/get-started/linux-macos-setup.html#step-3-set-up-the-tools). It can expanded to export all required developement enviroments.
+
+```bash
+alias get_idf='
+. $HOME/esp/esp-idf/export.sh
+. $HOME/esp/esp-davang/export.sh
+'
+```
 
 ---
 
