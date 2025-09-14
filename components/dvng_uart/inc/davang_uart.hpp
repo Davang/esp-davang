@@ -21,241 +21,204 @@
 
 /* 3rd party includes */
 #include "driver/uart.h"
-#include "hal/uart_ll.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
+
+
 
 /* custom includes*/
-
+#include "davang_gpio.hpp"
 
 
 /*! Specific davang namespace for uart data types related. */
 namespace  dvng::uart
 {
-
 /* data types */
-using port_t = uint32_t;		/*! \brief data type representing  uart port */
-
-using isr_t = std::function<void(const void*, size_t)>;		/*! \brief data type representing rx empty buffer interrupt */
-
+using port_t = uint32_t; /*! \brief data type representing  uart port */
 
 /* enumerators */
 enum class BAUD_RATE : int
 {
-	BS_2400 = 2400,
-	BS_4800 = 4800,
-	BS_9600 = 9600,
-	BS_19200 = 19200,
-	BS_38400 = 38400,
-	BS_57600 = 57600,
-	BS_115200 = 115200,
+    BR_2400   = 2400,
+    BR_4800   = 4800,
+    BR_9600   = 9600,
+    BR_19200  = 19200,
+    BR_38400  = 38400,
+    BR_57600  = 57600,
+    BR_115200 = 115200
 };
+
 
 enum class WORD_LENGTH : uint32_t
 {
-	BITS_5 = UART_DATA_5_BITS,
-	BITS_6 = UART_DATA_6_BITS,
-	BITS_7 = UART_DATA_7_BITS,
-	BITS_8 = UART_DATA_8_BITS,
-	TOTAL,
+    BITS_5 = UART_DATA_5_BITS,
+    BITS_6 = UART_DATA_6_BITS,
+    BITS_7 = UART_DATA_7_BITS,
+    BITS_8 = UART_DATA_8_BITS,
+    TOTAL
 };
+
 
 enum class STOP_BITS : uint32_t
 {
-	STOP_1 = UART_STOP_BITS_1,
-	STOP_1_5 = UART_STOP_BITS_1_5,
-	STOP_2 = UART_STOP_BITS_2,
-	TOTAL,
+    STOP_1   = UART_STOP_BITS_1,
+    STOP_1_5 = UART_STOP_BITS_1_5,
+    STOP_2   = UART_STOP_BITS_2,
+    TOTAL
 };
+
 
 enum class PARITY : uint32_t
 {
-	NONE = UART_PARITY_DISABLE,
-	EVEN = UART_PARITY_EVEN,
-	ODD = UART_PARITY_ODD,
-	TOTAL,
+    NONE = UART_PARITY_DISABLE,
+    EVEN = UART_PARITY_EVEN,
+    ODD  = UART_PARITY_ODD,
+    TOTAL
 };
+
 
 enum class HW_CONTROL : uint32_t
 {
-	NONE = UART_HW_FLOWCTRL_DISABLE,
-	RTS = UART_HW_FLOWCTRL_RTS,
-	CTS = UART_HW_FLOWCTRL_CTS,
-	RTS_CTS = UART_HW_FLOWCTRL_CTS_RTS,
-	TOTAL,
+    NONE    = UART_HW_FLOWCTRL_DISABLE,
+    RTS     = UART_HW_FLOWCTRL_RTS,
+    CTS     = UART_HW_FLOWCTRL_CTS,
+    RTS_CTS = UART_HW_FLOWCTRL_CTS_RTS,
+    TOTAL
 };
 
-enum class INTERRUPT_BUFFER : uint32_t
-{
-	NONE = 0x00,
-	RX,
-	TOTAL,
-};
 
 /* constants */
 constexpr port_t MAX_PORT = UART_NUM_MAX;
 
+constexpr dvng::gpio::pin_t DEFAULT_PIN = UART_PIN_NO_CHANGE;
+
 
 /* asssertion structures */
 template< port_t T_PORT,
-	 BAUD_RATE T_BRATE =  BAUD_RATE::BS_115200,
-	 WORD_LENGTH T_WORD_LENGTH =  WORD_LENGTH::BITS_8,
-	 PARITY T_PARITY =  PARITY::NONE,
-	 STOP_BITS T_STOP_BITS =  STOP_BITS::STOP_1,
-	 HW_CONTROL T_HW_CONTROL =  HW_CONTROL::NONE,
-	 INTERRUPT_BUFFER T_INTERRUPT =  INTERRUPT_BUFFER::NONE >
-struct s_asserter
+  dvng::uart::BAUD_RATE T_BRATE = BAUD_RATE::BR_9600,
+  dvng::uart::WORD_LENGTH T_WORD_LENGTH = WORD_LENGTH::BITS_8,
+  dvng::uart::PARITY T_PARITY = PARITY::NONE,
+  dvng::uart::STOP_BITS T_STOP_BITS = STOP_BITS::STOP_1,
+  dvng::uart::HW_CONTROL T_HW_CONTROL = HW_CONTROL::NONE,
+  dvng::gpio::pin_t T_TX_PIN = DEFAULT_PIN,
+  dvng::gpio::pin_t T_RX_PIN = DEFAULT_PIN,
+  dvng::gpio::pin_t T_RTS_PIN = DEFAULT_PIN,
+  dvng::gpio::pin_t T_CTS_PIN = DEFAULT_PIN
+  >
+struct s_config
 {
+    static constexpr dvng::uart::port_t      M_PORT        = T_PORT;
+    static constexpr dvng::uart::BAUD_RATE   M_BRATE       = T_BRATE;
+    static constexpr dvng::uart::WORD_LENGTH M_WORD_LENGTH = T_WORD_LENGTH;
+    static constexpr dvng::uart::PARITY      M_PARITY      = T_PARITY;
+    static constexpr dvng::uart::STOP_BITS   M_STOP_BITS   = T_STOP_BITS;
+    static constexpr dvng::uart::HW_CONTROL  M_HW_CONTROL  = T_HW_CONTROL;
 
-static_assert( ( T_PORT < MAX_PORT ), "UART port not supported" );
-static_assert( ( T_WORD_LENGTH < WORD_LENGTH::TOTAL ), "UART word length not supported" );
-static_assert( ( T_PARITY < PARITY::TOTAL ), "UART parity not supported" );
-static_assert( ( T_STOP_BITS < STOP_BITS::TOTAL ), "UART stop bits not supported" );
-static_assert( ( T_HW_CONTROL < HW_CONTROL::TOTAL ), "UART hardware control not supported" );
-static_assert( ( T_INTERRUPT < INTERRUPT_BUFFER::TOTAL ), "UART interrupt not supported" );
+    static constexpr dvng::gpio::s_pin_config< T_TX_PIN, dvng::gpio::MODE::OUTPUT > TX{};
+    static constexpr dvng::gpio::s_pin_config< T_RX_PIN, dvng::gpio::MODE::INPUT >  RX{};
 
+    static constexpr dvng::gpio::s_pin_config< T_RTS_PIN, dvng::gpio::MODE::OUTPUT > RTS{};
+    static constexpr dvng::gpio::s_pin_config< T_CTS_PIN, dvng::gpio::MODE::INPUT >  CTS{};
+
+    static constexpr dvng::gpio::pin_t M_TX_PIN{T_TX_PIN};
+    static constexpr dvng::gpio::pin_t  M_RX_PIN{T_RX_PIN};
+
+    static constexpr dvng::gpio::pin_t M_RTS_PIN{T_RTS_PIN};
+    static constexpr dvng::gpio::pin_t  M_CTS_PIN{T_CTS_PIN};
+
+
+    // static
+
+    static_assert( ( T_PORT < MAX_PORT ), "UART port not supported" );
+    static_assert( ( T_WORD_LENGTH < WORD_LENGTH::TOTAL ), "UART word length not supported" );
+    static_assert( ( T_PARITY < PARITY::TOTAL ), "UART parity not supported" );
+    static_assert( ( T_STOP_BITS < STOP_BITS::TOTAL ), "UART stop bits not supported" );
+    static_assert( ( T_HW_CONTROL < HW_CONTROL::TOTAL ), "UART hardware control not supported" );
 };
-
-
 } /* namespace dvng::uart */
+
 
 /*!< Generic davang namespace */
 namespace dvng
 {
-
-
 class c_uart
 {
 /* constant expressions */
-public:
-
-static constexpr size_t BUFFER_SIZE = 1024;
-static constexpr size_t QUEUE_SIZE = 32;
-
-protected:
-static constexpr UBaseType_t PRIORITY = tskIDLE_PRIORITY + 1;
-static constexpr TickType_t MIN_WAIT = 5 / portTICK_PERIOD_MS;
-static constexpr TickType_t MAX_WAIT = 20'000 / portTICK_PERIOD_MS;
-static constexpr TickType_t DEFAULT_WAIT = 100 / portTICK_PERIOD_MS;
-
-private:
 
 /* constants*/
 
-private:
+    private:
 
-const uart_config_t m_config;
-const uart::port_t m_port;
-const bool m_is_interrupt;
-const bool m_initalized_on_constructor;
+    const uart_config_t m_config;
+    const uart_port_t   m_port;
 
 /* data members */
-private:
-
-std::atomic<bool> m_should_finish;
-std::atomic<bool> m_is_task_running;
-
-TaskHandle_t m_isr_task;
-QueueHandle_t m_queue;
-
-SemaphoreHandle_t m_isr_mutex;
-uart::isr_t m_isr_callback;
 
 /* constructors and destructor */
-public:
+    public:
 
-c_uart( ) = delete;
 
-c_uart( const c_uart & ) = delete;
+    c_uart( ) = delete;
 
-c_uart( const c_uart && ) = delete;
+
+    c_uart( const c_uart & ) = delete;
+
+
+    c_uart( const c_uart && ) = delete;
+
 
 /*!
- * \ brief c_uart constructor 
+ * \ brief c_uart constructor
  */
-template< uart::port_t T_PORT,
-	uart::BAUD_RATE T_BRATE = uart::BAUD_RATE::BS_115200,
-	uart::WORD_LENGTH T_WORD_LENGTH = uart::WORD_LENGTH::BITS_8,
-	uart::PARITY T_PARITY = uart::PARITY::NONE,
-	uart::STOP_BITS T_STOP_BITS = uart::STOP_BITS::STOP_1,
-	uart::HW_CONTROL T_HW_CONTROL = uart::HW_CONTROL::NONE,
-	uart::INTERRUPT_BUFFER T_INTERRUPT = uart::INTERRUPT_BUFFER::NONE >
-c_uart( const uart::s_asserter< T_PORT, T_BRATE, T_WORD_LENGTH, T_PARITY, T_STOP_BITS, T_HW_CONTROL, T_INTERRUPT > & , const bool t_should_init) :
-	m_config {
-		.baud_rate = static_cast< int >( T_BRATE ),
-		.data_bits = static_cast< uart_word_length_t > ( T_WORD_LENGTH ),
-		.parity = static_cast< uart_parity_t > ( T_PARITY ),
-		.stop_bits = static_cast< uart_stop_bits_t > ( T_STOP_BITS ),
-		.flow_ctrl = static_cast< uart_hw_flowcontrol_t > ( T_HW_CONTROL ),
-		.rx_flow_ctrl_thresh = 122,
-		.source_clk = UART_SCLK_DEFAULT
-	},
-	m_port{T_PORT},
-	m_is_interrupt{ ( ( uart::INTERRUPT_BUFFER::NONE < T_INTERRUPT ) && ( uart::INTERRUPT_BUFFER::TOTAL > T_INTERRUPT) ) },
-	m_initalized_on_constructor{ t_should_init },
-	m_should_finish{true},
-	m_isr_task{nullptr},
-	m_isr_mutex{nullptr}
-{
-	if( true == m_initalized_on_constructor )
-	{
-		if( ESP_OK != init( ) )
-		{
-			esp_restart( );
-		}
-	}
-}
+    template< auto ... ARGS_T >
+    c_uart( const uart::s_config< ARGS_T ... > & t_config ) :
+        m_config{
+        .baud_rate           = static_cast< int >( uart::s_config< ARGS_T ... >::M_BRATE ),
+        .data_bits           = static_cast< uart_word_length_t >( uart::s_config< ARGS_T ... >::M_WORD_LENGTH ),
+        .parity              = static_cast< uart_parity_t >( uart::s_config< ARGS_T ... >::M_PARITY ),
+        .stop_bits           = static_cast< uart_stop_bits_t >( uart::s_config< ARGS_T ... >::M_STOP_BITS ),
+        .flow_ctrl           = static_cast< uart_hw_flowcontrol_t >( uart::s_config< ARGS_T ... >::M_HW_CONTROL ),
+        .rx_flow_ctrl_thresh = 122,
+        .source_clk          = UART_SCLK_DEFAULT,
+        .flags               = { 0, 0 },
+        },
+        m_port{ static_cast< uart_port_t >( uart::s_config< ARGS_T ... >::M_PORT ) }
+    {
+        int error = uart_driver_install( m_port, 1024, 0, 0, NULL, 0 );
 
-template< uart::port_t T_PORT,
-	uart::BAUD_RATE T_BRATE = uart::BAUD_RATE::BS_115200,
-	uart::WORD_LENGTH T_WORD_LENGTH = uart::WORD_LENGTH::BITS_8,
-	uart::PARITY T_PARITY = uart::PARITY::NONE,
-	uart::STOP_BITS T_STOP_BITS = uart::STOP_BITS::STOP_1,
-	uart::HW_CONTROL T_HW_CONTROL = uart::HW_CONTROL::NONE,
-	uart::INTERRUPT_BUFFER T_INTERRUPT = uart::INTERRUPT_BUFFER::NONE >
-c_uart( const uart::s_asserter< T_PORT, T_BRATE, T_WORD_LENGTH, T_PARITY, T_STOP_BITS, T_HW_CONTROL, T_INTERRUPT > & t_config ) :
-	c_uart( t_config , true )
-{
-	
-}
+        if ( ESP_OK == error )
+        {
+            error = uart_param_config( m_port, &m_config );
+        }
+
+        if ( ESP_OK == error )
+        {
+            using uart_config_t = uart::s_config< ARGS_T ... >;
+            error = uart_set_pin( m_port, uart_config_t::M_TX_PIN, uart_config_t::M_RX_PIN, uart_config_t::M_RTS_PIN, uart_config_t::M_CTS_PIN );
+        }
+        else
+        {
+            esp_restart();
+        }
+    }
 
 
-virtual ~c_uart( );
+    virtual ~c_uart( );
 
 
 /* methods */
-public:	
+    public:
 
-	[[nodiscard("Always ensure valid uart initialization")]]
-	int init( );
+    [[nodiscard("Do not dvng::c_uart::send result")]] int send( const void * t_data, size_t & t_length );
 
-	[[nodiscard("Always ensure valid ping configuration")]]
-	int configure_pins( int tx_pin, int rx_pin );
 
-	void deinit( );
+    [[nodiscard("Do not dvng::c_uart::send result")]] int send( const void * t_data, const size_t & t_length );
 
-	[[nodiscard("Always ensure valid uart initialization")]]
-	int send( const void * t_data, size_t & t_length );
 
-	[[nodiscard("Always ensure valid uart initialization")]]
-	int send( const void * t_data, const size_t & t_length );
+    [[nodiscard("Do not dvng::c_uart::receive result")]] int receive( void * t_data, size_t & t_length );
 
-	[[nodiscard("Always ensure valid uart initialization")]]
-	int receive( void * t_data, size_t & t_length );
 
-	[[nodiscard("Always ensure correct isr registration ")]]
-	int register_isr( uart::isr_t t_isr );
-
-	void deregister_isr( );
-
-private:
-	void wait_for_message_isr( );
-	static void isr_task ( void * t_uart );
+    [[nodiscard("Do not dvng::c_uart::receive result")]] int receive( TickType_t t_timeout, void * t_data, size_t & t_length );
 };
-
-
 } /* namespace dvng */
+
 
 #endif /* ESP_DAVANG_COMPONENTS_DVNG_UART_DAVANG_UART_H */

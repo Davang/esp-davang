@@ -19,4 +19,4 @@ export DAVANG_ESP DAVANG_COMPONENT_DIRS
 echo "davang esp env: "$DAVANG_ESP
 echo "davang components path:" $DAVANG_COMPONENT_DIRS
 
-get_idf
+export PATH=$PATH:"$DAVANG_ESP/tools"
