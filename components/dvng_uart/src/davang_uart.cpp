@@ -13,9 +13,12 @@
 
 /* 3rd party includes */
 #include "esp_err.h"
+#include "freertos/FreeRTOS.h"
 
 /* custom includes*/
 #include "davang_uart.hpp"
+
+
 
 namespace dvng
 {
@@ -77,7 +80,7 @@ int c_uart::send( const void * t_data, const size_t & t_length )
 
 
 
-int c_uart::receive( void * t_data, size_t & t_length )
+int c_uart::receive( TickType_t t_timeout, void * t_data, size_t & t_length )
 {
     int error = ESP_OK;
 
@@ -87,7 +90,7 @@ int c_uart::receive( void * t_data, size_t & t_length )
     }
     else
     {
-        error = uart_read_bytes( m_port, t_data, static_cast< uint32_t >( t_length ), DEFAULT_WAIT );
+        error = uart_read_bytes( m_port, t_data, static_cast< uint32_t >( t_length ), t_timeout );
 
         if ( ESP_FAIL == error )
         {
@@ -101,5 +104,12 @@ int c_uart::receive( void * t_data, size_t & t_length )
     }
 
     return error;
+}
+
+
+
+int c_uart::receive( void * t_data, size_t & t_length )
+{
+    return receive( 100 / portTICK_PERIOD_MS, t_data, t_length );
 }
 }

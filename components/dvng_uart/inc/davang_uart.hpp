@@ -21,11 +21,7 @@
 
 /* 3rd party includes */
 #include "driver/uart.h"
-#include "hal/uart_ll.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
+
 
 
 /* custom includes*/
@@ -41,13 +37,13 @@ using port_t = uint32_t; /*! \brief data type representing  uart port */
 /* enumerators */
 enum class BAUD_RATE : int
 {
-    BS_2400   = 2400,
-    BS_4800   = 4800,
-    BS_9600   = 9600,
-    BS_19200  = 19200,
-    BS_38400  = 38400,
-    BS_57600  = 57600,
-    BS_115200 = 115200
+    BR_2400   = 2400,
+    BR_4800   = 4800,
+    BR_9600   = 9600,
+    BR_19200  = 19200,
+    BR_38400  = 38400,
+    BR_57600  = 57600,
+    BR_115200 = 115200
 };
 
 
@@ -92,14 +88,20 @@ enum class HW_CONTROL : uint32_t
 /* constants */
 constexpr port_t MAX_PORT = UART_NUM_MAX;
 
+constexpr dvng::gpio::pin_t DEFAULT_PIN = UART_PIN_NO_CHANGE;
+
 
 /* asssertion structures */
 template< port_t T_PORT,
-  dvng::uart::BAUD_RATE T_BRATE = BAUD_RATE::BS_115200,
+  dvng::uart::BAUD_RATE T_BRATE = BAUD_RATE::BR_9600,
   dvng::uart::WORD_LENGTH T_WORD_LENGTH = WORD_LENGTH::BITS_8,
   dvng::uart::PARITY T_PARITY = PARITY::NONE,
   dvng::uart::STOP_BITS T_STOP_BITS = STOP_BITS::STOP_1,
-  dvng::uart::HW_CONTROL T_HW_CONTROL = HW_CONTROL::NONE
+  dvng::uart::HW_CONTROL T_HW_CONTROL = HW_CONTROL::NONE,
+  dvng::gpio::pin_t T_TX_PIN = DEFAULT_PIN,
+  dvng::gpio::pin_t T_RX_PIN = DEFAULT_PIN,
+  dvng::gpio::pin_t T_RTS_PIN = DEFAULT_PIN,
+  dvng::gpio::pin_t T_CTS_PIN = DEFAULT_PIN
   >
 struct s_config
 {
@@ -109,6 +111,19 @@ struct s_config
     static constexpr dvng::uart::PARITY      M_PARITY      = T_PARITY;
     static constexpr dvng::uart::STOP_BITS   M_STOP_BITS   = T_STOP_BITS;
     static constexpr dvng::uart::HW_CONTROL  M_HW_CONTROL  = T_HW_CONTROL;
+
+    static constexpr dvng::gpio::s_pin_config< T_TX_PIN, dvng::gpio::MODE::OUTPUT > TX{};
+    static constexpr dvng::gpio::s_pin_config< T_RX_PIN, dvng::gpio::MODE::INPUT >  RX{};
+
+    static constexpr dvng::gpio::s_pin_config< T_RTS_PIN, dvng::gpio::MODE::OUTPUT > RTS{};
+    static constexpr dvng::gpio::s_pin_config< T_CTS_PIN, dvng::gpio::MODE::INPUT >  CTS{};
+
+    static constexpr dvng::gpio::pin_t M_TX_PIN{T_TX_PIN};
+    static constexpr dvng::gpio::pin_t  M_RX_PIN{T_RX_PIN};
+
+    static constexpr dvng::gpio::pin_t M_RTS_PIN{T_RTS_PIN};
+    static constexpr dvng::gpio::pin_t  M_CTS_PIN{T_CTS_PIN};
+
 
     // static
 
@@ -127,18 +142,6 @@ namespace dvng
 class c_uart
 {
 /* constant expressions */
-    public:
-
-    static constexpr size_t BUFFER_SIZE = 1024;
-    static constexpr size_t QUEUE_SIZE  = 32;
-
-    protected:
-    static constexpr UBaseType_t PRIORITY     = tskIDLE_PRIORITY + 1;
-    static constexpr TickType_t  MIN_WAIT     = 5 / portTICK_PERIOD_MS;
-    static constexpr TickType_t  MAX_WAIT     = 20'000 / portTICK_PERIOD_MS;
-    static constexpr TickType_t  DEFAULT_WAIT = 100 / portTICK_PERIOD_MS;
-
-    private:
 
 /* constants*/
 
@@ -148,9 +151,6 @@ class c_uart
     const uart_port_t   m_port;
 
 /* data members */
-    private:
-
-    QueueHandle_t m_queue;
 
 /* constructors and destructor */
     public:
@@ -182,16 +182,17 @@ class c_uart
         },
         m_port{ static_cast< uart_port_t >( uart::s_config< ARGS_T ... >::M_PORT ) }
     {
-        int error = uart_driver_install( static_cast< uart_port_t >( m_port ), BUFFER_SIZE, BUFFER_SIZE, QUEUE_SIZE, &m_queue, 0 );
+        int error = uart_driver_install( m_port, 1024, 0, 0, NULL, 0 );
 
         if ( ESP_OK == error )
         {
-            error = uart_param_config( static_cast< uart_port_t >( m_port ), &m_config );
+            error = uart_param_config( m_port, &m_config );
         }
 
         if ( ESP_OK == error )
         {
-            error = uart_set_pin( static_cast< uart_port_t >( m_port ), UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE );
+            using uart_config_t = uart::s_config< ARGS_T ... >;
+            error = uart_set_pin( m_port, uart_config_t::M_TX_PIN, uart_config_t::M_RX_PIN, uart_config_t::M_RTS_PIN, uart_config_t::M_CTS_PIN );
         }
         else
         {
@@ -206,13 +207,16 @@ class c_uart
 /* methods */
     public:
 
-    [[nodiscard("")]] int send( const void * t_data, size_t & t_length );
+    [[nodiscard("Do not dvng::c_uart::send result")]] int send( const void * t_data, size_t & t_length );
 
 
-    [[nodiscard("")]] int send( const void * t_data, const size_t & t_length );
+    [[nodiscard("Do not dvng::c_uart::send result")]] int send( const void * t_data, const size_t & t_length );
 
 
-    [[nodiscard("")]] int receive( void * t_data, size_t & t_length );
+    [[nodiscard("Do not dvng::c_uart::receive result")]] int receive( void * t_data, size_t & t_length );
+
+
+    [[nodiscard("Do not dvng::c_uart::receive result")]] int receive( TickType_t t_timeout, void * t_data, size_t & t_length );
 };
 } /* namespace dvng */
 

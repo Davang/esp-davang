@@ -83,10 +83,26 @@ enum class LEVEL : uint32_t
 /* constants */
 
 /*!< Specific davang namespace for gpio data types related. */
-constexpr pin_t MAX_PIN = GPIO_PIN_COUNT;
+constexpr pin_t MAX_PIN     = GPIO_PIN_COUNT;
+constexpr pin_t DEFAULT_PIN = -1;
 
 
 /* asssertion structures */
+template< dvng::gpio::pin_t T_PIN, dvng::gpio::MODE T_MODE >
+struct s_pin_config
+{
+    static constexpr dvng::gpio::pin_t M_PIN  = T_PIN;
+    static constexpr dvng::gpio::MODE  M_MODE = T_MODE;
+
+    static constexpr bool IS_OUTPUT_SUPPORTED = ( DEFAULT_PIN == M_PIN ) || ( 0 != ( ( 1ULL << T_PIN ) & SOC_GPIO_VALID_OUTPUT_GPIO_MASK ) );
+
+    static_assert( ( DEFAULT_PIN == M_PIN ) || ( ( 0 <= M_PIN ) && ( 0 != ( ( 1ULL << M_PIN ) & SOC_GPIO_VALID_GPIO_MASK ) ) ), "Not a valid gpio pin number" );
+    static_assert( ( M_MODE == MODE::INPUT ) || ( ( M_MODE == MODE::OUTPUT ) && ( true == IS_OUTPUT_SUPPORTED ) ),
+        "Output mode not supported, this pin shall only be an input" );
+
+    static_assert( M_MODE < dvng::gpio::MODE::TOTAL, "Not a valid dvng::gpio::MODE value" );
+};
+
 
 template<
     dvng::gpio::pin_t T_PIN,
@@ -94,23 +110,15 @@ template<
     dvng::gpio::PULL_UP T_PULL_UP = PULL_UP::NONE,
     dvng::gpio::PULL_DOWN T_PULL_DOWN = PULL_DOWN::NONE,
     dvng::gpio::EVENT T_EVENT = EVENT::NONE >
-struct s_config
+struct s_config : public s_pin_config< T_PIN, T_MODE >
 {
-    static constexpr dvng::gpio::pin_t     M_PIN       = T_PIN;
-    static constexpr dvng::gpio::MODE      M_MODE      = T_MODE;
     static constexpr dvng::gpio::PULL_UP   M_PULL_UP   = T_PULL_UP;
     static constexpr dvng::gpio::PULL_DOWN M_PULL_DOWN = T_PULL_DOWN;
     static constexpr dvng::gpio::EVENT     M_EVENT     = T_EVENT;
 
-    static_assert( M_MODE < dvng::gpio::MODE::TOTAL, "Not a valid dvng::gpio::MODE value" );
     static_assert( M_PULL_UP < dvng::gpio::PULL_UP::TOTAL, "Not a valid dvng::gpio::PULL_UP value" );
     static_assert( M_PULL_DOWN < dvng::gpio::PULL_DOWN::TOTAL, "Not a valid dvng::gpio::PULL_DOWN value" );
     static_assert( M_EVENT < dvng::gpio::EVENT::TOTAL, "Not a valid dvng::gpio::EVENT value" );
-
-    static_assert( ( ( 0 <= M_PIN ) && ( 0 != ( ( 1ULL << M_PIN ) & SOC_GPIO_VALID_GPIO_MASK ) ) ), "Not a valid gpio pin number" );
-
-    static constexpr bool IS_OUTPUT_SUPPORTED = ( 0 != ( ( 1ULL << T_PIN ) & SOC_GPIO_VALID_OUTPUT_GPIO_MASK ) );
-    static_assert( ( M_MODE == MODE::INPUT ) || ( ( M_MODE == MODE::OUTPUT ) && ( true == IS_OUTPUT_SUPPORTED ) ), "Output mode not supported, this pin shall only be an input" );
 };
 } /* namespace dvng::gpio */
 
@@ -185,8 +193,7 @@ class c_gpio
 
 /* methods */
     public:
-    [[nodiscard( "Why get the level of a pin if not using it?" )]] gpio::LEVEL get_level( );
-
+    [[nodiscard( "Do not dvng::c_gpio::get_level result" )]] gpio::LEVEL get_level( );
 
     int set_level( const gpio::LEVEL & t_level );
 
@@ -217,8 +224,7 @@ class c_gpio
     }
 
 
-    [[nodiscard( "Always ensure correct isr registration " )]] int register_isr( gpio::isr_t t_isr, void * t_arguments );
-
+    [[nodiscard( "Do not dvng::c_gpio::register_isr result" )]] int register_isr( gpio::isr_t t_isr, void * t_arguments );
 
     void deregister_isr( );
 };
