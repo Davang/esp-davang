@@ -97,8 +97,7 @@ struct s_pin_config
     static constexpr bool IS_OUTPUT_SUPPORTED = ( DEFAULT_PIN == M_PIN ) || ( 0 != ( ( 1ULL << T_PIN ) & SOC_GPIO_VALID_OUTPUT_GPIO_MASK ) );
 
     static_assert( ( DEFAULT_PIN == M_PIN ) || ( ( 0 <= M_PIN ) && ( 0 != ( ( 1ULL << M_PIN ) & SOC_GPIO_VALID_GPIO_MASK ) ) ), "Not a valid gpio pin number" );
-    static_assert( ( M_MODE == MODE::INPUT ) || ( ( M_MODE == MODE::OUTPUT ) && ( true == IS_OUTPUT_SUPPORTED ) ),
-        "Output mode not supported, this pin shall only be an input" );
+    static_assert( ( M_MODE == MODE::INPUT ) || ( ( M_MODE == MODE::OUTPUT ) && ( true == IS_OUTPUT_SUPPORTED ) ), "Output mode not supported, this pin shall only be an input" );
 
     static_assert( M_MODE < dvng::gpio::MODE::TOTAL, "Not a valid dvng::gpio::MODE value" );
 };
@@ -195,6 +194,7 @@ class c_gpio
     public:
     [[nodiscard( "Do not dvng::c_gpio::get_level result" )]] gpio::LEVEL get_level( );
 
+
     int set_level( const gpio::LEVEL & t_level );
 
 
@@ -225,6 +225,7 @@ class c_gpio
 
 
     [[nodiscard( "Do not dvng::c_gpio::register_isr result" )]] int register_isr( gpio::isr_t t_isr, void * t_arguments );
+
 
     void deregister_isr( );
 };

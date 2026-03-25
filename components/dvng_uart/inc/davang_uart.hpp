@@ -13,9 +13,12 @@
 /* C includes */
 #include <cstdint>
 #include <cassert>
+#include <cstddef>
 
 /* C++ includes */
 #include <atomic>
+#include <array>
+#include <tuple>
 #include <utility>
 #include <functional>
 
@@ -93,7 +96,7 @@ constexpr dvng::gpio::pin_t DEFAULT_PIN = UART_PIN_NO_CHANGE;
 
 /* asssertion structures */
 template< port_t T_PORT,
-  dvng::uart::BAUD_RATE T_BRATE = BAUD_RATE::BR_9600,
+  dvng::uart::BAUD_RATE T_BRATE = BAUD_RATE::BR_115200,
   dvng::uart::WORD_LENGTH T_WORD_LENGTH = WORD_LENGTH::BITS_8,
   dvng::uart::PARITY T_PARITY = PARITY::NONE,
   dvng::uart::STOP_BITS T_STOP_BITS = STOP_BITS::STOP_1,
@@ -118,11 +121,11 @@ struct s_config
     static constexpr dvng::gpio::s_pin_config< T_RTS_PIN, dvng::gpio::MODE::OUTPUT > RTS{};
     static constexpr dvng::gpio::s_pin_config< T_CTS_PIN, dvng::gpio::MODE::INPUT >  CTS{};
 
-    static constexpr dvng::gpio::pin_t M_TX_PIN{T_TX_PIN};
-    static constexpr dvng::gpio::pin_t  M_RX_PIN{T_RX_PIN};
+    static constexpr dvng::gpio::pin_t M_TX_PIN{ T_TX_PIN };
+    static constexpr dvng::gpio::pin_t M_RX_PIN{ T_RX_PIN };
 
-    static constexpr dvng::gpio::pin_t M_RTS_PIN{T_RTS_PIN};
-    static constexpr dvng::gpio::pin_t  M_CTS_PIN{T_CTS_PIN};
+    static constexpr dvng::gpio::pin_t M_RTS_PIN{ T_RTS_PIN };
+    static constexpr dvng::gpio::pin_t M_CTS_PIN{ T_CTS_PIN };
 
 
     // static
@@ -192,7 +195,7 @@ class c_uart
         if ( ESP_OK == error )
         {
             using uart_config_t = uart::s_config< ARGS_T ... >;
-            error = uart_set_pin( m_port, uart_config_t::M_TX_PIN, uart_config_t::M_RX_PIN, uart_config_t::M_RTS_PIN, uart_config_t::M_CTS_PIN );
+            error               = uart_set_pin( m_port, uart_config_t::M_TX_PIN, uart_config_t::M_RX_PIN, uart_config_t::M_RTS_PIN, uart_config_t::M_CTS_PIN );
         }
         else
         {
@@ -207,16 +210,50 @@ class c_uart
 /* methods */
     public:
 
-    [[nodiscard("Do not dvng::c_uart::send result")]] int send( const void * t_data, size_t & t_length );
+    template< size_t N >
+    [[nodiscard("Do not dvng::c_uart::send result")]] std::tuple<int, ssize_t> send( const std::array< std::byte, N > & t_data )
+    {
+        ssize_t size = N;
+        int error   = uart_write_bytes( m_port, t_data.data(), t_data.size() );
 
+        if ( ESP_FAIL == error )
+        {
+            size = 0;
+        }
+        else
+        {
+            size  = static_cast< ssize_t >( error );
+            error = ESP_OK;
+        }
 
-    [[nodiscard("Do not dvng::c_uart::send result")]] int send( const void * t_data, const size_t & t_length );
+        return std::tie(error, size);
+    }
 
+    template< size_t N >
+    [[nodiscard("Do not dvng::c_uart::receive result")]] inline std::tuple<int, ssize_t> receive( std::array< std::byte, N > & t_data  )
+    {
+        return receive( 100 / portTICK_PERIOD_MS, t_data);
+    }
 
-    [[nodiscard("Do not dvng::c_uart::receive result")]] int receive( void * t_data, size_t & t_length );
+    template< size_t N >
+    [[nodiscard("Do not dvng::c_uart::receive result")]] std::tuple<int, ssize_t> receive( TickType_t t_timeout, std::array< std::byte, N > & t_data  )
+    {
+        ssize_t size = N;
+        int error = uart_read_bytes( m_port, t_data.data(), t_data.size(), t_timeout );
 
+        if ( ESP_FAIL == error )
+        {
+            size = 0;
+        }
+        else
+        {
+            size  = static_cast< ssize_t >( error );
+            error = ESP_OK;
+        }
 
-    [[nodiscard("Do not dvng::c_uart::receive result")]] int receive( TickType_t t_timeout, void * t_data, size_t & t_length );
+        return std::tie(error, size);
+    }
+
 };
 } /* namespace dvng */
 
