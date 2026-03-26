@@ -12,7 +12,7 @@ extern "C" void app_main( )
                                                dvng::c_gpio( dvng::gpio::s_config< 20, dvng::gpio::MODE::OUTPUT >( ) ),
                                                dvng::c_gpio( dvng::gpio::s_config< 21, dvng::gpio::MODE::OUTPUT >( ) ) };
 
-    dvng::c_gpio input_pin = dvng::c_gpio( dvng::gpio::s_config< 35, dvng::gpio::MODE::INPUT, dvng::gpio::PULL_UP::ACTIVE, dvng::gpio::PULL_DOWN::ACTIVE, dvng::gpio::INTERRUPT::NONE >( ) );
+    dvng::c_gpio input_pin = dvng::c_gpio( dvng::gpio::s_config< 35, dvng::gpio::MODE::INPUT, dvng::gpio::PULL_UP::ACTIVE, dvng::gpio::PULL_DOWN::ACTIVE, dvng::gpio::EVENT::NONE >( ) );
 
     unsigned int i = 0;
 

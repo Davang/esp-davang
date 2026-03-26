@@ -88,18 +88,23 @@ constexpr pin_t DEFAULT_PIN = -1;
 
 
 /* asssertion structures */
-template< dvng::gpio::pin_t T_PIN, dvng::gpio::MODE T_MODE >
+template< dvng::gpio::pin_t T_PIN >
 struct s_pin_config
 {
     static constexpr dvng::gpio::pin_t M_PIN  = T_PIN;
-    static constexpr dvng::gpio::MODE  M_MODE = T_MODE;
-
-    static constexpr bool IS_OUTPUT_SUPPORTED = ( DEFAULT_PIN == M_PIN ) || ( 0 != ( ( 1ULL << T_PIN ) & SOC_GPIO_VALID_OUTPUT_GPIO_MASK ) );
 
     static_assert( ( DEFAULT_PIN == M_PIN ) || ( ( 0 <= M_PIN ) && ( 0 != ( ( 1ULL << M_PIN ) & SOC_GPIO_VALID_GPIO_MASK ) ) ), "Not a valid gpio pin number" );
-    static_assert( ( M_MODE == MODE::INPUT ) || ( ( M_MODE == MODE::OUTPUT ) && ( true == IS_OUTPUT_SUPPORTED ) ), "Output mode not supported, this pin shall only be an input" );
+};
+
+template< dvng::gpio::pin_t T_PIN, dvng::gpio::MODE T_MODE >
+struct s_pin_mode_config : public s_pin_config< T_PIN >
+{
+    static constexpr dvng::gpio::MODE  M_MODE = T_MODE;
+
+    static constexpr bool IS_OUTPUT_SUPPORTED = ( DEFAULT_PIN == s_pin_config< T_PIN >::M_PIN ) || ( 0 != ( ( 1ULL << s_pin_config< T_PIN >::M_PIN ) & SOC_GPIO_VALID_OUTPUT_GPIO_MASK ) );
 
     static_assert( M_MODE < dvng::gpio::MODE::TOTAL, "Not a valid dvng::gpio::MODE value" );
+    static_assert( ( M_MODE == MODE::INPUT ) || ( ( M_MODE == MODE::OUTPUT ) && ( true == IS_OUTPUT_SUPPORTED ) ), "Output mode not supported, this pin shall only be an input" );
 };
 
 
@@ -109,7 +114,7 @@ template<
     dvng::gpio::PULL_UP T_PULL_UP = PULL_UP::NONE,
     dvng::gpio::PULL_DOWN T_PULL_DOWN = PULL_DOWN::NONE,
     dvng::gpio::EVENT T_EVENT = EVENT::NONE >
-struct s_config : public s_pin_config< T_PIN, T_MODE >
+struct s_config : public s_pin_mode_config< T_PIN, T_MODE >
 {
     static constexpr dvng::gpio::PULL_UP   M_PULL_UP   = T_PULL_UP;
     static constexpr dvng::gpio::PULL_DOWN M_PULL_DOWN = T_PULL_DOWN;
