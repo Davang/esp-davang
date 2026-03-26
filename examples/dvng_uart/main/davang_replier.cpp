@@ -14,24 +14,25 @@ extern "C" void app_main()
 {
     dvng::c_uart replier = dvng::c_uart( dvng::uart::s_config< 0, dvng::uart::BAUD_RATE::BR_115200 >( ) );
 
-    int error = ESP_OK;
-    if ( ESP_OK == error )
+    std::string message = " send quit to terminate ";
+    std::array< std::byte, 255 > buffer { std::byte{ 0 } };
+    memcpy( buffer.data(), message.c_str(), message.size() );
+    (void)replier.send( buffer );
+
+    while ( message != "quit" )
     {
-        std::string message = " send quit to terminate ";
-        ( void )replier.send( message.c_str(), message.size() );
-
-        message.reserve( 255 );
-        while ( message != "quit" )
+        buffer.fill( std::byte{0} );
+        const auto & [error, size] = replier.receive( buffer );
+        if ( ESP_OK == error )
         {
-            char msg[255] = {0};
-            size_t size = 255;
-            if( ESP_OK == replier.receive( msg, size ) )
-            {
-                message = msg;
-                ( void )replier.send( message.c_str(), message.size() );
-            }
-
-            vTaskDelay( 100 / portTICK_PERIOD_MS );
+            (void)replier.send( buffer );
         }
+
+        std::string message = " received " + std::to_string(size) +" bytes\n";
+        memcpy( buffer.data(), message.c_str(), message.size() );
+        (void)replier.send( buffer );
+        
+        vTaskDelay( 1000 / portTICK_PERIOD_MS );
     }
+
 }

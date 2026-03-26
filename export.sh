@@ -6,7 +6,7 @@
 
 if [ "$BASH_SOURCE" = "$0" ]
 then
-	echo "This scipt should be sourced not run"L
+	echo "This scipt should be sourced not run"
 	exit 1
 fi
 

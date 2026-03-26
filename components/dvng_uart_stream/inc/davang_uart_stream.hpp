@@ -12,9 +12,12 @@
 
 /* C includes */
 #include <cstdint>
+#include <cstring>
+#include <cstddef>
 
 /* C++ includes */
 #include <concepts>
+#include <format>
 #include <string>
 
 /* 3rd party includes */
@@ -37,12 +40,10 @@ enum class NUM_BASE : unsigned int
 };
 
 
-enum class END_LINE : unsigned int
+enum class END_LINE : std::underlying_type_t < std::byte >
 {
-    LF = 0,
-    CR,
-    CR_LF,
-    LF_CR
+    LF = '\n',
+    CR = '\r'
 };
 
 
@@ -59,13 +60,6 @@ struct s_bool
 struct s_dec_precision
 {
     size_t m_decimal_length;
-};
-
-
-template< uart::port_t T_PORT >
-struct s_uart_port
-{
-    static constexpr uart::port_t PORT = T_PORT;
 };
 }
 
@@ -107,15 +101,15 @@ class c_uart_stream
 
 
 /* constructors and destructor */
-    template< uart::port_t T_PORT >
-    c_uart_stream( const uart_stream::s_uart_port< T_PORT > & t_port ) :
+    template< auto ... ARGS_T >
+    c_uart_stream( ) :
         m_numbers_base { uart_stream::NUM_BASE::DEC },
         m_dec_precision{.m_decimal_length = DEFAULT_DECIMAL_SIZE },
         m_bool_text    {
         .m_true_value{ "0" },
         .m_false_value{ "1" }
         },
-        m_uart_port{ uart::s_asserter< T_PORT >( ) }
+        m_uart_port( dvng::uart::s_config< 0 >() )
     {
 
     }
@@ -130,9 +124,6 @@ class c_uart_stream
     virtual ~c_uart_stream( );
 
 
-    c_uart_stream & operator<<( const uart_stream::END_LINE & t_pointer );
-
-
     c_uart_stream & operator<<( const uart_stream::NUM_BASE & t_pointer );
 
 
@@ -142,134 +133,50 @@ class c_uart_stream
     c_uart_stream & operator<<( const uart_stream::s_bool & t_pointer );
 
 
+    c_uart_stream & operator<<( const uart_stream::END_LINE & t_pointer );
+
+
     c_uart_stream & operator<<( const void * t_pointer );
 
 
     c_uart_stream & operator<<( const char * t_text );
 
 
-    c_uart_stream & operator<<( const char t_text );
-
-
-    c_uart_stream & operator<<( const std::string & t_text );
+    c_uart_stream & operator<<( const std::string_view & t_text );
 
 
     c_uart_stream & operator<<( const bool & t_boolean );
 
 
-    c_uart_stream & operator<<( const size_t & t_size );
-
-
-    c_uart_stream & operator<<( const ssize_t & t_size );
-
-
-    c_uart_stream & operator<<( const std::unsigned_integral auto & t_integral )
+    c_uart_stream & operator<<( const std::integral auto & t_integral )
     {
-        char        msg_buffer[ MAX_MSG_SIZE ] = { 0 };
-        std::string format_size                = "%";
-
-        if constexpr ( sizeof( char ) == sizeof( t_integral ) )
+        if( uart_stream::NUM_BASE::HEX  == m_numbers_base)
         {
-            format_size += "hh";
-        }
-        else
-        if constexpr ( sizeof( uint16_t ) == sizeof( t_integral ) )
-        {
-            format_size += "h";
-        }
-        else
-        if constexpr ( sizeof( uint32_t ) == sizeof( t_integral ) )
-        {
-            format_size += "l";
-        }
-        else
-        if constexpr ( sizeof( uint64_t ) == sizeof( t_integral ) )
-        {
-            format_size += "ll";
+            send_to_port( std::format( "{:x}", t_integral ) );
         }
         else
         {
-            // do nothing
+            send_to_port( std::format( "{}", t_integral ) );
         }
-
-        if ( uart_stream::NUM_BASE::DEC == m_numbers_base )
-        {
-            format_size += "u";
-        }
-        else
-        if ( uart_stream::NUM_BASE::HEX == m_numbers_base )
-        {
-            format_size += "x";
-        }
-        else
-        {
-        }
-
-        ( void )snprintf( msg_buffer, MAX_MSG_SIZE, format_size.c_str(), t_integral );
-        ( void )m_uart_port.send( msg_buffer, strlen( msg_buffer ) );
-        return *this;
-    }
-
-
-    c_uart_stream & operator<<( const std::signed_integral auto & t_integral )
-    {
-        char msg_buffer[ MAX_MSG_SIZE ] = { 0 };
-        if constexpr ( sizeof( int8_t ) == sizeof( t_integral ) )
-        {
-            ( void )snprintf( msg_buffer, MAX_MSG_SIZE, "%hhd", t_integral );
-        }
-        else
-        if constexpr ( sizeof( int16_t ) == sizeof( t_integral ) )
-        {
-            ( void )snprintf( msg_buffer, MAX_MSG_SIZE, "%hd", t_integral );
-        }
-        else
-        if constexpr ( sizeof( int32_t ) == sizeof( t_integral ) )
-        {
-            ( void )snprintf( msg_buffer, MAX_MSG_SIZE, "%ld", t_integral );
-        }
-        else
-        if constexpr ( sizeof( int64_t ) == sizeof( t_integral ) )
-        {
-            ( void )snprintf( msg_buffer, MAX_MSG_SIZE, "%lld", t_integral );
-        }
-        else
-        {
-            // do nothing
-        }
-
-        ( void )m_uart_port.send( msg_buffer, strlen( msg_buffer ) );
         return *this;
     }
 
 
     c_uart_stream & operator<<( const std::floating_point auto & t_floatpoint )
     {
-        char msg_buffer[ MAX_MSG_SIZE ]   = { 0 };
-        char float_format[ MAX_MSG_SIZE ] = { 0 };
-        if constexpr ( sizeof( float ) == sizeof( t_floatpoint ) )
-        {
-            ( void )snprintf( float_format, MAX_MSG_SIZE, "%%.%df", m_dec_precision.m_decimal_length );
-        }
-        else
-        if constexpr ( sizeof( double ) == sizeof( t_floatpoint ) )
-        {
-            ( void )snprintf( float_format, MAX_MSG_SIZE, "%%.%dlf", m_dec_precision.m_decimal_length );
-        }
-        else
-        if constexpr ( sizeof( long double ) == sizeof( t_floatpoint ) )
-        {
-            ( void )snprintf( float_format, MAX_MSG_SIZE, "%%.%dLf", m_dec_precision.m_decimal_length );
-        }
-        else
-        {
-            // do nothing
-        }
-
-        ( void )snprintf( msg_buffer, MAX_MSG_SIZE, float_format, t_floatpoint );
-        ( void )m_uart_port.send( msg_buffer, strlen( msg_buffer ) );
+        send_to_port( std::format( "{:.{}f}", t_floatpoint, m_dec_precision.m_decimal_length ) );
         return *this;
     }
+
+private:
+
+    void send_to_port( const std::string & t_msg )
+    {
+        std::array< std::byte, MAX_MSG_SIZE > buffer { std::byte{ 0 } };
+        memcpy( buffer.data(), t_msg.c_str(), t_msg.size() );
+        (void)m_uart_port.send( buffer );
+    }
+
 };
 }
 
