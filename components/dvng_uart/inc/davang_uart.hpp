@@ -24,8 +24,8 @@
 
 /* 3rd party includes */
 #include "driver/uart.h"
-
-
+#include "freertos/FreeRTOS.h"
+#include "esp_err.h"
 
 /* custom includes*/
 #include "davang_gpio.hpp"
@@ -115,11 +115,11 @@ struct s_config
     static constexpr dvng::uart::STOP_BITS   M_STOP_BITS   = T_STOP_BITS;
     static constexpr dvng::uart::HW_CONTROL  M_HW_CONTROL  = T_HW_CONTROL;
 
-    static constexpr dvng::gpio::s_pin_config< T_TX_PIN, dvng::gpio::MODE::OUTPUT > TX{};
-    static constexpr dvng::gpio::s_pin_config< T_RX_PIN, dvng::gpio::MODE::INPUT >  RX{};
+    static constexpr dvng::gpio::s_pin_mode_config< T_TX_PIN, dvng::gpio::MODE::OUTPUT > TX{};
+    static constexpr dvng::gpio::s_pin_mode_config< T_RX_PIN, dvng::gpio::MODE::INPUT >  RX{};
 
-    static constexpr dvng::gpio::s_pin_config< T_RTS_PIN, dvng::gpio::MODE::OUTPUT > RTS{};
-    static constexpr dvng::gpio::s_pin_config< T_CTS_PIN, dvng::gpio::MODE::INPUT >  CTS{};
+    static constexpr dvng::gpio::s_pin_mode_config< T_RTS_PIN, dvng::gpio::MODE::OUTPUT > RTS{};
+    static constexpr dvng::gpio::s_pin_mode_config< T_CTS_PIN, dvng::gpio::MODE::INPUT >  CTS{};
 
     static constexpr dvng::gpio::pin_t M_TX_PIN{ T_TX_PIN };
     static constexpr dvng::gpio::pin_t M_RX_PIN{ T_RX_PIN };

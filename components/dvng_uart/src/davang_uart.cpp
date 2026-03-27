@@ -12,8 +12,6 @@
 /* C++ includes */
 
 /* 3rd party includes */
-#include "esp_err.h"
-#include "freertos/FreeRTOS.h"
 
 /* custom includes*/
 #include "davang_uart.hpp"
